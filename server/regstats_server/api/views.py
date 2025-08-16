@@ -1,0 +1,1 @@
+# All views for paths starting with /api/

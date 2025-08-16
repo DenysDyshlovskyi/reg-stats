@@ -1,0 +1,4 @@
+/server/regstats
+/server/regstats_server/__pycache__
+/server/regstats_server/api/__pycache__
+/server/regstats_server/migrations/__pycache__
