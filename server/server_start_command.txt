@@ -1,0 +1,1 @@
+python -m daphne -p 9090 regstats.asgi:application

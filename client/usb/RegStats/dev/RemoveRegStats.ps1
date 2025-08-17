@@ -47,6 +47,7 @@ if (Test-Path -Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\
 Get-ChildItem -Path "$mainLocation" | ForEach-Object {
     try {
         Remove-Item -Path $_.FullName -Force
+        Write-Host "Removed item: $_"
     } catch {
         Write-Error "Failed to delete file: $_"
     }
@@ -54,6 +55,7 @@ Get-ChildItem -Path "$mainLocation" | ForEach-Object {
 
 # Remove main location directory
 Remove-Item -Path $mainLocation -Force
+Write-Host "Removed path: $mainLocation"
 
 Read-Host "Script done, press enter to continue..."
 exit

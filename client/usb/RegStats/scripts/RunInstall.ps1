@@ -44,7 +44,7 @@ try {
 
     # Get client id and add it to vars.json
     $clientId = $response.client_id
-    $vars.client_id = $clientId
+    $vars | Add-Member -Type NoteProperty -Name "client_id" -Value $clientId
     Set-Content -Path "$mainLocation\vars.json" -Value ($vars | ConvertTo-Json) -Force
 
     # Create shortcut in startup folder
