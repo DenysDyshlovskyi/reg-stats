@@ -1,0 +1,1 @@
+// JavaScript file for function for all pages

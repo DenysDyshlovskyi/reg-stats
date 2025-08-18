@@ -3,9 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Index</title>
+    <style>
+        {{index_css | safe}}
+    </style>
+    <style>
+        {{universal_css | safe}}
+    </style>
 </head>
 <body>
     Start page goes here
 </body>
+<script>
+    {{universal_js | safe}}
+</script>
+<script>
+    {{index_js | safe}}
+</script>
 </html>
