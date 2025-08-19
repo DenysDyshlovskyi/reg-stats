@@ -4,3 +4,4 @@
 /server/regstats_server/migrations/__pycache__
 /client/development/build
 /server/regstats_server/migrations
+/client/usb/RegStats/client/python_embed

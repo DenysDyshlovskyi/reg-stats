@@ -50,7 +50,7 @@ try {
     # Create shortcut in startup folder
     $WshShell = New-Object -COMObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\RegStats.lnk")
-    $Shortcut.TargetPath = "$mainLocation\REG Stats Client.exe"
+    $Shortcut.TargetPath = "$mainLocation\run.bat"
     $Shortcut.WorkingDirectory = "$mainLocation"
     $Shortcut.Save()
 
@@ -60,7 +60,8 @@ try {
     foreach ($file in Get-ChildItem -Path $mainLocation -File -Recurse) {
         Unblock-File -Path $file.FullName
     }
-    Start-Process -FilePath "$mainLocation\REG Stats Client.exe"
+
+    Start-Process -FilePath "$mainLocation\run.bat" -WorkingDirectory "$mainLocation"
 
     Read-Host "Script done, press enter to exit..."
     exit

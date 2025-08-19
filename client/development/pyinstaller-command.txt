@@ -1,1 +1,0 @@
-pyinstaller --onefile --noconsole --name "REG Stats Client" --version-file=version.txt --icon=icon.ico main.py

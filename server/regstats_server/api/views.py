@@ -98,6 +98,7 @@ def remove_client(request):
         }, status=405)
 
 # Gets a session id to use to connect to websocket
+@csrf_exempt
 def get_ws_session(request):
     if request.method == "POST":
         # Get post data

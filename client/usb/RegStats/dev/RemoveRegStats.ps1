@@ -24,8 +24,8 @@ $varsClient = Get-Content -Path "$mainLocation\vars.json" | ConvertFrom-Json
 $clientId = $varsClient.client_id
 
 # If the exe is running, kill it
-if (Get-Process -Name "REG Stats Client" -ErrorAction SilentlyContinue) {
-    Stop-Process -Name "REG Stats Client" -Force
+if (Get-Process -Name "RegStatsClient" -ErrorAction SilentlyContinue) {
+    Stop-Process -Name "RegStatsClient" -Force
     Write-Host "Killed reg stats client process"
 }
 
@@ -44,17 +44,19 @@ if (Test-Path -Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\
 }
 
 # Delete all files in main location
-Get-ChildItem -Path "$mainLocation" | ForEach-Object {
+Get-ChildItem -Path "$mainLocation" -Recurse | ForEach-Object {
     try {
-        Remove-Item -Path $_.FullName -Force
-        Write-Host "Removed item: $_"
+        if (Test-Path -Path $_.FullName -PathType Leaf) {
+            Remove-Item -Path $_.FullName -Force
+            Write-Host "Removed item: $_"
+        }
     } catch {
         Write-Error "Failed to delete file: $_"
     }
 }
 
 # Remove main location directory
-Remove-Item -Path $mainLocation -Force
+Remove-Item -Path $mainLocation -Force -Recurse
 Write-Host "Removed path: $mainLocation"
 
 Read-Host "Script done, press enter to continue..."
