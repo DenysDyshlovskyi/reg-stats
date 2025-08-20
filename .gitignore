@@ -5,3 +5,5 @@
 /client/development/build
 /server/regstats_server/migrations
 /client/usb/RegStats/client/python_embed
+client/Run-Build-https-wss.ps1
+/client/usb_https_wss

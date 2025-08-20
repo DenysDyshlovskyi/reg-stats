@@ -65,7 +65,7 @@ class ClientConsumer(AsyncWebsocketConsumer):
                 }
             }
         )
-        return await super().disconnect(code)
+        pass
 
     async def receive(self, text_data):
         print_debug(f"Client consumer received data: {text_data}")
@@ -81,6 +81,6 @@ class ClientConsumer(AsyncWebsocketConsumer):
         print_debug(f"Client consumer received data event: {event}")
         message = event['message']
         # Send the message to the WebSocket client
-        await self.send(text_data=json.dumps({
+        await self.send(text_data={
             'message': message
-        }))
+        })

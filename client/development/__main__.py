@@ -10,6 +10,8 @@ def main():
     # Define variables
     DEBUG = True
     DEBUG_FILE_PATH = os.path.join(os.getcwd(), "debug.txt")
+    WEBSOCKET_PREFIX = "ws://"
+    HTTP_PREFIX = "http://"
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -19,6 +21,7 @@ def main():
     # Writes something to debug file
     def write_to_debug(e):
         if DEBUG:
+            print(e)
             with open(DEBUG_FILE_PATH, 'a') as debug_file:
                 ct = datetime.datetime.now()
                 debug_file.write(f"-------------------- {ct} -------------------- \n {str(e)} \n")
@@ -38,30 +41,38 @@ def main():
 
             # Generate session for client
             session = requests.Session()
-            session.post(f"http://{domain_http}/api/get_ws_session", data={
+            response = session.post(f"{HTTP_PREFIX}{domain_http}/api/get_ws_session", data={
                 "client_id": client_id,
                 "master_key": master_key
             })
+            write_to_debug(response)
 
             # Get session id from cookies
             cookies = session.cookies.get_dict()
             sessionid = cookies.get('sessionid')
+            write_to_debug(f"Session id: {sessionid}")
 
             # Use sessionid in websocket headers
             async def connect():
-                uri = f"ws://{domain_http}/ws/client/"
+                uri = f"{WEBSOCKET_PREFIX}{domain_http}/ws/client/"
+                write_to_debug(f"Websocket url: {uri}")
                 headers = {
-                    'Cookie': f'sessionid={sessionid}'
+                    'Cookie': f'sessionid={sessionid}',
+                    'Origin': f'{HTTP_PREFIX}{domain_http}'
                 }
 
-                async with websockets.connect(uri, extra_headers=headers) as websocket:
-                    await websocket.send({
-                        'sender': 'c',
-                        'type': 'test',
-                        'client_id': client_id
-                    })
-
-            asyncio.run(connect())
+                async with websockets.connect(uri, additional_headers=headers) as websocket:
+                    while True:
+                        try:
+                            response = await websocket.recv()
+                            write_to_debug(f"Response received: {response}")
+                        except Exception as e:
+                            write_to_debug(e)
+                            break
+            try:
+                asyncio.run(connect())
+            except Exception as e:
+                write_to_debug(f"Error connecting to websocket: {e}")
         except Exception as e:
             write_to_debug(e)
             time.sleep(10)
