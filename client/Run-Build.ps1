@@ -31,8 +31,4 @@ $usbClient = "$clientBaseDir\usb\RegStats\client"
 if (Test-Path -Path "$usbClient\$output" -PathType Leaf) {Remove-Item -Path "$usbClient\$output" -Force}
 Copy-Item -Path "$pyzPath" -Destination "$usbClient" -Force
 
-if (Test-Path -Path "D:\RegStats" -PathType Container) {
-    Copy-Item -Path "$usbClient\*" -Destination "D:\RegStats\client" -Force
-}
-
 Read-Host "Press enter to exit"
