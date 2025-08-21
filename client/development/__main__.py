@@ -15,9 +15,9 @@ def main():
     DEBUG_FILE_PATH = os.path.join(os.getcwd(), "debug.txt")
     WEBSOCKET_PREFIX = "ws://"
     HTTP_PREFIX = "http://"
-    CPU_SEND_INTERVAL = 1
-    RAM_SEND_INTERVAL = 1
-    PING_INTERVAL = 1
+    CPU_SEND_INTERVAL = 5
+    RAM_SEND_INTERVAL = 5
+    PING_INTERVAL = 2
     BANDWIDTH_INTERVAL = 1
     BANDWIDTH_SEND_DELAY = 5
 
