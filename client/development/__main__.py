@@ -7,6 +7,7 @@ import time
 import subprocess
 import datetime
 import traceback
+import re
 
 def main():
     # Define variables
@@ -16,6 +17,7 @@ def main():
     HTTP_PREFIX = "http://"
     CPU_SEND_INTERVAL = 1
     RAM_SEND_INTERVAL = 1
+    PING_INTERVAL = 1
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -83,6 +85,44 @@ def main():
                             write_to_debug(traceback.format_exc())
                             await asyncio.sleep(CPU_SEND_INTERVAL)
 
+                # Gets ping in ms
+                async def ping(websocket):
+                    while True:
+                        try:
+                            # Remove port from domain_http if it exists
+                            if ":" in domain_http:
+                                ping_target = domain_http.split(":")[0]
+                            else:
+                                ping_target = domain_http
+
+                            # Run the ping command asynchronously
+                            process = await asyncio.create_subprocess_exec(
+                                "ping", "-n", "1", ping_target, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                            )
+
+                            # Capture the output
+                            stdout, stderr = await process.communicate()
+
+                            # Decode the output to string
+                            ping_output = stdout.decode()
+
+                            # Use regex to find the time value
+                            match = re.search(r"time[=<](\d+ms)", ping_output)
+                            if match:
+                                ping = match.group(1)
+                                await websocket.send(json.dumps({
+                                    'sender': 'c',
+                                    'type': 'ping',
+                                    'ping': ping,
+                                    'client_id': client_id
+                                }))
+                            else:
+                                write_to_debug(f"Error getting ping: {ping_output}")
+                            await asyncio.sleep(PING_INTERVAL)
+                        except Exception:
+                            write_to_debug(traceback.format_exc())
+                            await asyncio.sleep(PING_INTERVAL)
+
                 # Gets ram usage and sends it
                 async def send_ram(websocket):
                     while True:
@@ -105,9 +145,10 @@ def main():
                             await asyncio.sleep(RAM_SEND_INTERVAL)
 
                 async with websockets.connect(uri, additional_headers=headers) as websocket:
-                    # Start cpu and ram tasks as background processes
+                    # Start cpu, ping and ram tasks as background processes
                     cpu_send_task = asyncio.create_task(send_cpu(websocket=websocket))
                     ram_send_task = asyncio.create_task(send_ram(websocket=websocket))
+                    ping_task = asyncio.create_task(ping(websocket=websocket))
                     while True:
                         # Wait for messages from websocket
                         try:
@@ -118,6 +159,7 @@ def main():
                             if cpu_send_task:
                                 cpu_send_task.cancel()
                                 ram_send_task.cancel()
+                                ping_task.cancel()
                             await asyncio.sleep(1)
                             break
 
