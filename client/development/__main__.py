@@ -186,21 +186,34 @@ def main():
                     received_bandwidth = (final_stats[0] - initial_stats[0]) / BANDWIDTH_INTERVAL
                     transmitted_bandwidth = (final_stats[1] - initial_stats[1]) / BANDWIDTH_INTERVAL
 
-                    return received_bandwidth, transmitted_bandwidth
+                    download_speed = (received_bandwidth / 1024) # KB/s
+                    upload_speed = (transmitted_bandwidth / 1024) # KB/s
 
-                # Sends bandwidth to websocket
+                    return received_bandwidth, transmitted_bandwidth, download_speed, upload_speed
+
+                # Sends bandwidth and download and upload speed to websocket
                 async def get_bandwidth(websocket):
                     while True:
                         try:
                             # Get bandwidth from other function
-                            received_bandwidth, transmitted_bandwidth = await measure_bandwidth()
+                            received_bandwidth, transmitted_bandwidth, download_speed, upload_speed = await measure_bandwidth()
 
-                            # Send through websocket
+                            # Send bandwidth through websocket
                             await websocket.send(json.dumps({
                                 'sender': 'c',
                                 'type': 'bandwidth',
                                 'received': received_bandwidth,
                                 'transmitted': transmitted_bandwidth,
+                                'bandwidth_interval': BANDWIDTH_INTERVAL,
+                                'client_id': client_id
+                            }))
+
+                            # Send upload and download speed through websocket
+                            await websocket.send(json.dumps({
+                                'sender': 'c',
+                                'type': 'download_upload',
+                                'upload_speed': upload_speed,
+                                'download_speed': download_speed,
                                 'bandwidth_interval': BANDWIDTH_INTERVAL,
                                 'client_id': client_id
                             }))
