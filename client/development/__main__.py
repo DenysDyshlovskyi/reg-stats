@@ -18,6 +18,8 @@ def main():
     CPU_SEND_INTERVAL = 1
     RAM_SEND_INTERVAL = 1
     PING_INTERVAL = 1
+    BANDWIDTH_INTERVAL = 1
+    BANDWIDTH_SEND_DELAY = 5
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -144,11 +146,76 @@ def main():
                             write_to_debug(traceback.format_exc())
                             await asyncio.sleep(RAM_SEND_INTERVAL)
 
+                async def get_netstat_stats():
+                    # Run netstat command to get network stats
+                    process = await asyncio.create_subprocess_exec(
+                        "netstat", "-e", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    )
+                    
+                    stdout, stderr = await process.communicate()
+                    return stdout.decode()
+
+                def parse_netstat_stats(output):
+                    # Regex to extract the Received and Sent bytes from the correct row
+                    received_bytes, sent_bytes = 0, 0
+                    lines = output.splitlines()
+                    
+                    # Look for the line that contains "Bytes" in the second row after the header
+                    for line in lines:
+                        # Match the line with the format of the row containing bytes
+                        match = re.search(r"\s*(\d+)\s+(\d+)", line)
+                        if match:
+                            received_bytes = int(match.group(1))  # Received bytes
+                            sent_bytes = int(match.group(2))      # Sent bytes
+                            break
+
+                    return received_bytes, sent_bytes
+
+                async def measure_bandwidth():
+                    # Record initial stats
+                    initial_output = await get_netstat_stats()
+                    initial_stats = parse_netstat_stats(initial_output)
+
+                    await asyncio.sleep(BANDWIDTH_INTERVAL)
+
+                    # Record stats after interval
+                    final_output = await get_netstat_stats()
+                    final_stats = parse_netstat_stats(final_output)
+
+                    # Calculate bandwidth usage
+                    received_bandwidth = (final_stats[0] - initial_stats[0]) / BANDWIDTH_INTERVAL
+                    transmitted_bandwidth = (final_stats[1] - initial_stats[1]) / BANDWIDTH_INTERVAL
+
+                    return received_bandwidth, transmitted_bandwidth
+
+                # Sends bandwidth to websocket
+                async def get_bandwidth(websocket):
+                    while True:
+                        try:
+                            # Get bandwidth from other function
+                            received_bandwidth, transmitted_bandwidth = await measure_bandwidth()
+
+                            # Send through websocket
+                            await websocket.send(json.dumps({
+                                'sender': 'c',
+                                'type': 'bandwidth',
+                                'received': received_bandwidth,
+                                'transmitted': transmitted_bandwidth,
+                                'bandwidth_interval': BANDWIDTH_INTERVAL,
+                                'client_id': client_id
+                            }))
+
+                            await asyncio.sleep(BANDWIDTH_SEND_DELAY)
+                        except Exception:
+                            write_to_debug(traceback.format_exc())
+                            await asyncio.sleep(BANDWIDTH_SEND_DELAY)
+
                 async with websockets.connect(uri, additional_headers=headers) as websocket:
                     # Start cpu, ping and ram tasks as background processes
                     cpu_send_task = asyncio.create_task(send_cpu(websocket=websocket))
                     ram_send_task = asyncio.create_task(send_ram(websocket=websocket))
                     ping_task = asyncio.create_task(ping(websocket=websocket))
+                    bandwidth_task = asyncio.create_task(get_bandwidth(websocket=websocket))
                     while True:
                         # Wait for messages from websocket
                         try:
@@ -160,6 +227,7 @@ def main():
                                 cpu_send_task.cancel()
                                 ram_send_task.cancel()
                                 ping_task.cancel()
+                                bandwidth_task.cancel()
                             await asyncio.sleep(1)
                             break
 
