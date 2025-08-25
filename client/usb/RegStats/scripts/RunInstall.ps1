@@ -26,12 +26,57 @@ try {
     $masterKey = $vars.master_key
     $postUrl = "http://$ipDomain/api/register"
 
-    # Create json structure with relevant info
+    # Get public ip adress
+    try {
+        $publicIpResponse = Invoke-RestMethod -Uri "https://api.ipify.org?format=json"
+        $publicIP = $publicIpResponse.ip
+    } catch {
+        $publicIP = "Unavailable"
+    }
+
+    # Get cpu name
+    $cpuName = (Get-CimInstance -ClassName Win32_Processor).Name
+
+    # Get ram details
+    $ramInfo = Get-CimInstance -ClassName Win32_PhysicalMemory
+
+    # Get ddr type
+    $ddrType = "DDR"
+    if ($ramInfo.ConfiguredVoltage -eq 1200) {
+        $ddrType = "DDR4"
+    } elseif ($ramInfo.ConfiguredVoltage -eq 1500) {
+        $ddrType = "DDR3"
+    } elseif ($ramInfo.ConfiguredVoltage -eq 1800) {
+        $ddrType = "DDR2"
+    } elseif ($ramInfo.ConfiguredVoltage -gt 1800) {
+        $ddrType = "DDR"
+    } elseif ($ramInfo.ConfiguredVoltage -lt 1200) {
+        $ddrType = "DDR5"
+    }
+
+    # Get capacity
+    $ramCapacity = ($ramInfo.Capacity / [Math]::Pow(1024,3))
+
+    # Put everything together
+    $ramName = '{0} {1} {2}GB {3}MHz {4}' -f $ramInfo.Manufacturer, $ddrType, $ramCapacity, $ramInfo.ConfiguredClockSpeed, $ramInfo.SerialNumber
+
+    # Create json structure with all pc info
+    $pcInfo = @{
+        username = "$env:USERNAME"
+        computer_name = "$env:COMPUTERNAME"
+        onedrive_path = "$env:OneDrive"
+        onedrive_path_commercial = "$env:OneDriveCommercial"
+        domain = "$env:USERDOMAIN"
+        os = "$env:OS"
+        cpu = "$cpuName"
+        ram = "$ramName"
+        public_ip = "$publicIP"
+    } | ConvertTo-Json
+
+    # Create json structure for post request
     $postData = @{
-        "username" = $env:USERNAME
-        "domain" = $env:USERDOMAIN
-        "computerName" = $env:COMPUTERNAME
         "masterKey" = $masterKey
+        "pcInfo" = $pcInfo
     } | ConvertTo-Json
 
     # Post to server

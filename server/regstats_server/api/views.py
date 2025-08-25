@@ -22,11 +22,9 @@ def register(request):
                     "message": "Incorrect master key."
                 }
             }, status=401)
-
-        # Get client details
-        username = body["username"]
-        domain = body["domain"]
-        computer_name = body["computerName"]
+        
+        # Parse pcinfo
+        pc_info = json.loads(body["pcInfo"])
 
         # Generate client uuid
         client_id = uuid.uuid4()
@@ -34,9 +32,8 @@ def register(request):
         # Insert client into database
         client = Clients(
             id=client_id,
-            username=username,
-            domain=domain,
-            computer_name=computer_name
+            nickname=pc_info["username"],
+            pc_info=json.dumps(pc_info)
         )
         client.save()
 

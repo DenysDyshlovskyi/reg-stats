@@ -27,6 +27,7 @@ def main():
     READ_WRITE_DATA_MB = 512 #MB
     GET_STORAGE_INTERVAL = 1800
     GET_UPTIME_INTERVAL = 3600
+    GET_PROCESSES_INTERVAL = 120
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -389,6 +390,56 @@ def main():
                             write_to_debug(traceback.format_exc())
                             await asyncio.sleep(GET_UPTIME_INTERVAL)
 
+                async def get_processes(websocket):
+                    while True:
+                        try:
+                            # Get all processes with their names, cpu usage and ram usage
+                            command = '''powershell "$cpu_cores = (Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors; Get-Process | Select-Object Name, CPU, @{Name='MemoryUsageMB';Expression={[math]::round($_.WorkingSet / 1MB, 2)}} | ForEach-Object {$_.CPU = if ($_.CPU) { [math]::round($_.CPU / $cpu_cores, 2) } else { 0 } $_} | ConvertTo-Json"'''
+
+                            # Run the command
+                            process = await asyncio.create_subprocess_shell(command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                            
+                            # Capture the output
+                            stdout, stderr = await process.communicate()
+                            
+                            if process.returncode == 0:
+                                final_dict = {}
+                                json_output = stdout.decode().strip()
+
+                                # Convert the json to a dictionary
+                                processes_dict = json.loads(json_output)
+
+                                # Loop through it
+                                for item in processes_dict:
+                                    process_name = item["Name"]
+                                    if process_name not in final_dict:
+                                        final_dict[process_name] = {
+                                            "cpu": 0,
+                                            "ram": 0
+                                        }
+
+                                    # Add to final dict
+                                    if item["CPU"]:
+                                        final_dict[process_name]["cpu"] += item["CPU"]
+
+                                    if item["MemoryUsageMB"]:
+                                        final_dict[process_name]["ram"] += item["MemoryUsageMB"]
+
+                                # Send to websocket
+                                await websocket.send(json.dumps({
+                                    'sender': 'c',
+                                    'type': 'processes',
+                                    'processes': final_dict,
+                                    'client_id': client_id
+                                }))
+                            else:
+                                write_to_debug(f"Error: {stderr.decode().strip()}")
+
+                            await asyncio.sleep(GET_PROCESSES_INTERVAL)
+                        except Exception:
+                            write_to_debug(traceback.format_exc())
+                            await asyncio.sleep(GET_PROCESSES_INTERVAL)
+
                 async with websockets.connect(uri, additional_headers=headers) as websocket:
                     # Start background processes
                     task_list = []
@@ -399,6 +450,7 @@ def main():
                     task_list.append(asyncio.create_task(get_read_write(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_storage(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_uptime(websocket=websocket)))
+                    task_list.append(asyncio.create_task(get_processes(websocket=websocket)))
                     while True:
                         # Wait for messages from websocket
                         try:
