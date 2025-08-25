@@ -26,6 +26,7 @@ def main():
     READ_WRITE_INTERVAL = 1800
     READ_WRITE_DATA_MB = 512 #MB
     GET_STORAGE_INTERVAL = 1800
+    GET_UPTIME_INTERVAL = 3600
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -358,15 +359,46 @@ def main():
                             write_to_debug(traceback.format_exc())
                             await asyncio.sleep(GET_STORAGE_INTERVAL)
 
+                async def get_uptime(websocket):
+                    while True:
+                        try:
+                            # Define command to get total seconds of uptime
+                            command = '''powershell "((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem | Select LastBootUpTime).LastBootUpTime).TotalSeconds"'''
+
+                            # Run the command
+                            process = await asyncio.create_subprocess_shell(command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+                            
+                            # Capture the output (uptime in seconds)
+                            stdout, stderr = await process.communicate()
+                            
+                            if process.returncode == 0:
+                                uptime = stdout.decode().strip()  # Output in seconds
+
+                                # Send to websocket
+                                await websocket.send(json.dumps({
+                                    'sender': 'c',
+                                    'type': 'uptime',
+                                    'seconds': round(float(uptime), 1),
+                                    'client_id': client_id
+                                }))
+                            else:
+                                write_to_debug(f"Error: {stderr.decode().strip()}")
+
+                            await asyncio.sleep(GET_UPTIME_INTERVAL)
+                        except Exception:
+                            write_to_debug(traceback.format_exc())
+                            await asyncio.sleep(GET_UPTIME_INTERVAL)
 
                 async with websockets.connect(uri, additional_headers=headers) as websocket:
-                    # Start cpu, ping and ram tasks as background processes
-                    cpu_send_task = asyncio.create_task(send_cpu(websocket=websocket))
-                    ram_send_task = asyncio.create_task(send_ram(websocket=websocket))
-                    ping_task = asyncio.create_task(ping(websocket=websocket))
-                    bandwidth_task = asyncio.create_task(get_bandwidth(websocket=websocket))
-                    read_write_task = asyncio.create_task(get_read_write(websocket=websocket))
-                    storage_task = asyncio.create_task(get_storage(websocket=websocket))
+                    # Start background processes
+                    task_list = []
+                    task_list.append(asyncio.create_task(send_cpu(websocket=websocket)))
+                    task_list.append(asyncio.create_task(send_ram(websocket=websocket)))
+                    task_list.append(asyncio.create_task(ping(websocket=websocket)))
+                    task_list.append(asyncio.create_task(get_bandwidth(websocket=websocket)))
+                    task_list.append(asyncio.create_task(get_read_write(websocket=websocket)))
+                    task_list.append(asyncio.create_task(get_storage(websocket=websocket)))
+                    task_list.append(asyncio.create_task(get_uptime(websocket=websocket)))
                     while True:
                         # Wait for messages from websocket
                         try:
@@ -374,13 +406,9 @@ def main():
                             write_to_debug(f"Response received: {response}")
                         except Exception:
                             write_to_debug(f"Failed receiving responses: {traceback.format_exc()}")
-                            if cpu_send_task:
-                                cpu_send_task.cancel()
-                                ram_send_task.cancel()
-                                ping_task.cancel()
-                                bandwidth_task.cancel()
-                                read_write_task.cancel()
-                                storage_task.cancel()
+                            for task in task_list:
+                                if task:
+                                    task.cancel()
                             await asyncio.sleep(1)
                             break
 
