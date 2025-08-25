@@ -8,6 +8,9 @@ import subprocess
 import datetime
 import traceback
 import re
+import aiofiles
+import random
+import shutil
 
 def main():
     # Define variables
@@ -20,6 +23,9 @@ def main():
     PING_INTERVAL = 2
     BANDWIDTH_INTERVAL = 1
     BANDWIDTH_SEND_DELAY = 5
+    READ_WRITE_INTERVAL = 1800
+    READ_WRITE_DATA_MB = 512 #MB
+    GET_STORAGE_INTERVAL = 1800
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -223,12 +229,144 @@ def main():
                             write_to_debug(traceback.format_exc())
                             await asyncio.sleep(BANDWIDTH_SEND_DELAY)
 
+                # Gets read and write speed for disks on computer            
+                async def get_read_write(websocket):
+                    while True:
+                        try:
+                            data = {}
+                            # Get list of drives on computer
+                            possible_drives = [f"{chr(65 + i)}" for i in range(26)]  # A: to Z:
+                            drives = [drive for drive in possible_drives if os.path.exists(f"{drive}:\\")]
+
+                            # Loop through drives
+                            for letter in drives:
+                                # Create path to write and read to
+                                test_dir = os.path.join(f"{letter}:\\", "regstats_rw_test")
+                                os.makedirs(test_dir, exist_ok=True)
+
+                                # Define test file path
+                                test_file = os.path.join(test_dir, "regstats_rw_test.txt")
+
+                                try:
+                                    # Take timestamp of start
+                                    start_time = time.time()
+                                    async with aiofiles.open(test_file, 'w', encoding='utf-8') as f:
+                                        # Try to write
+                                        small_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"  # 26 characters
+                                        total_size = READ_WRITE_DATA_MB * 1024 * 1024
+                                        chunk_size = 1024 * 1024 #1mb
+
+                                        while total_size > 0:
+                                            string_chunk = (small_string * (chunk_size // len(small_string)))[:chunk_size]
+                                            await f.write(string_chunk)
+                                            total_size -= len(string_chunk)
+                                except Exception:
+                                    write_to_debug(f"Error when writing to {letter}: {traceback.format_exc()}")
+
+                                # Measure how long it took
+                                end_time = time.time()
+                                time_taken = end_time - start_time
+                                mbps = round((READ_WRITE_DATA_MB / time_taken), 1)
+
+                                if letter not in data:
+                                    data[letter] = {}
+
+                                # Write to data
+                                data[letter]["write"] = {
+                                    "total_mb": READ_WRITE_DATA_MB,
+                                    "start_time": start_time,
+                                    "end_time": end_time,
+                                    "time_taken": time_taken,
+                                    "mbps": mbps
+                                }
+
+                                # Do everything again for read
+                                try:
+                                    # Take timestamp of start
+                                    start_time = time.time()
+                                    async with aiofiles.open(test_file, 'r', encoding='utf-8') as f:
+                                        await f.read()
+                                except Exception:
+                                    write_to_debug(f"Error when reading to {letter}: {traceback.format_exc()}")
+
+                                # Measure how long it took
+                                end_time = time.time()
+                                time_taken = end_time - start_time
+                                mbps = round((READ_WRITE_DATA_MB / time_taken), 1)
+
+                                # Write to data
+                                data[letter]["read"] = {
+                                    "total_mb": READ_WRITE_DATA_MB,
+                                    "start_time": start_time,
+                                    "end_time": end_time,
+                                    "time_taken": time_taken,
+                                    "mbps": mbps
+                                }
+
+                                # Cleanup
+                                if os.path.exists(test_dir):
+                                    shutil.rmtree(test_dir)
+
+                            # Send data in websocket
+                            await websocket.send(json.dumps({
+                                'sender': 'c',
+                                'type': 'read_write',
+                                'data': data,
+                                'client_id': client_id
+                            }))
+                            await asyncio.sleep(READ_WRITE_INTERVAL)
+                        except Exception:
+                            write_to_debug(traceback.format_exc())
+                            await asyncio.sleep(READ_WRITE_INTERVAL)
+
+                async def get_storage(websocket):
+                    while True:
+                        try:
+                            data = {}
+                            # Get list of drives on computer
+                            possible_drives = [f"{chr(65 + i)}" for i in range(26)]  # A: to Z:
+                            drives = [drive for drive in possible_drives if os.path.exists(f"{drive}:\\")]
+
+                            for letter in drives:
+                                if letter not in data:
+                                    data[letter] = {}
+
+                                # Get total used and avaiable storage
+                                total, used, free = shutil.disk_usage(f"{letter}:\\")
+
+                                # Convert bytes to GB for easier readability
+                                total_gb = round((total / (1024 ** 3)), 1)
+                                used_gb = round((used / (1024 ** 3)), 1)
+                                free_gb = round((free / (1024 ** 3)), 1)
+
+                                # Write to data
+                                data[letter] = {
+                                    "total_gb": total_gb,
+                                    "used_gb": used_gb,
+                                    "free_gb": free_gb
+                                }
+
+                            # Send through websocket
+                            await websocket.send(json.dumps({
+                                'sender': 'c',
+                                'type': 'storage',
+                                'data': data,
+                                'client_id': client_id
+                            }))
+                            await asyncio.sleep(GET_STORAGE_INTERVAL)
+                        except Exception:
+                            write_to_debug(traceback.format_exc())
+                            await asyncio.sleep(GET_STORAGE_INTERVAL)
+
+
                 async with websockets.connect(uri, additional_headers=headers) as websocket:
                     # Start cpu, ping and ram tasks as background processes
                     cpu_send_task = asyncio.create_task(send_cpu(websocket=websocket))
                     ram_send_task = asyncio.create_task(send_ram(websocket=websocket))
                     ping_task = asyncio.create_task(ping(websocket=websocket))
                     bandwidth_task = asyncio.create_task(get_bandwidth(websocket=websocket))
+                    read_write_task = asyncio.create_task(get_read_write(websocket=websocket))
+                    storage_task = asyncio.create_task(get_storage(websocket=websocket))
                     while True:
                         # Wait for messages from websocket
                         try:
@@ -241,6 +379,8 @@ def main():
                                 ram_send_task.cancel()
                                 ping_task.cancel()
                                 bandwidth_task.cancel()
+                                read_write_task.cancel()
+                                storage_task.cancel()
                             await asyncio.sleep(1)
                             break
 
