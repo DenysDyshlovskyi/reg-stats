@@ -84,3 +84,42 @@ class ClientConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message
         }))
+
+# Consumer browser connects to
+class BrowserConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # Get ip address
+        self.ip_address = self.scope.get("client")[0] if self.scope.get("client") else "Unavailable"
+
+        print_debug(f"Browser connected: IP: {self.ip_address}")
+
+        # Join group with clients
+        self.group_name = "client_group"
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, code):
+        print_debug(f"Browser disconnected: IP: {self.ip_address}")
+        pass
+
+    async def receive(self, text_data):
+        print_debug(f"Browser consumer received data: {text_data}")
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                'type': 'ws.message',
+                'message': text_data
+            }
+        )
+
+    async def ws_message(self, event):
+        print_debug(f"Browser consumer received data event: {event}")
+        message = event['message']
+        # Send the message to the WebSocket client
+        await self.send(text_data=json.dumps({
+            'message': message
+        }))
