@@ -60,6 +60,12 @@ try {
     # Put everything together
     $ramName = '{0} {1} {2}GB {3}MHz {4}' -f $ramInfo.Manufacturer, $ddrType, $ramCapacity, $ramInfo.ConfiguredClockSpeed, $ramInfo.SerialNumber
 
+    # Get serial number
+    $serialNumber = (Get-WmiObject -Class Win32_BIOS | Select-Object -Property SerialNumber).SerialNumber
+
+    # Get manufacturer
+    $manufacturer = (Get-WmiObject -Class Win32_BIOS | Select-Object -Property Manufacturer).Manufacturer
+
     # Create json structure with all pc info
     $pcInfo = @{
         username = "$env:USERNAME"
@@ -71,6 +77,8 @@ try {
         cpu = "$cpuName"
         ram = "$ramName"
         public_ip = "$publicIP"
+        serialNumber = "$serialNumber"
+        manufacturer = "$manufacturer"
     } | ConvertTo-Json
 
     # Create json structure for post request
