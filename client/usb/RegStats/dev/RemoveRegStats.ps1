@@ -26,6 +26,7 @@ $clientId = $varsClient.client_id
 
 # If the exe is running, kill it
 Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "*RegStatsClient.pyz*"} | ForEach-Object { Stop-Process -Id $_.ProcessId }
+Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "*$mainLocation\update.ps1*"} | ForEach-Object { Stop-Process -Id $_.ProcessId }
 
 # Post to server to remove client from database
 $postUrl = "$httpPrefix$ipDomain/api/remove_client"
