@@ -1,1 +1,155 @@
-/* Stylesheet for index page */
+:root {
+    --bg-main: linear-gradient(135deg, #0a0a0a, #1f1f1f);
+    --panel-bg: linear-gradient(145deg, #1c1c1c, #2c2c2c);
+    --accent: #facc15;
+    --shadow: rgba(0, 0, 0, 0.6);
+    --radius: 14px;
+    --text-light: #f3f4f6;
+    --muted: #9ca3af;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-light);
+    overflow: hidden;
+}
+
+section {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+h1 {
+    margin-bottom: 30px;
+    color: var(--accent);
+    font-size: 2.5rem;
+    text-align: center;
+}
+
+.flex-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    justify-content: center;
+    width: 100%;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    border: 2px solid transparent;
+    padding: 20px;
+    min-width: 400px;
+    max-width: 1000px;
+    box-shadow: 0 4px 16px var(--shadow);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.panel h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--accent);
+    font-size: 1.5rem;
+}
+
+.chart-box {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    margin-top: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 1rem;
+}
+
+th,
+td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #333;
+    text-align: left;
+}
+
+th {
+    color: var(--muted);
+}
+
+.log-table {
+    font-size: 1rem;
+}
+
+.tag {
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #000;
+    font-weight: bold;
+}
+
+.INFO {
+    background: #3b82f6;
+}
+
+.WARN {
+    background: #facc15;
+}
+
+.ERROR {
+    background: #ef4444;
+}
+
+.DEBUG {
+    background: #9ca3af;
+}
+
+#uptime {
+    font-size: 1.2rem;
+    margin-top: 10px;
+}
+
+.client-card {
+    background: var(--panel-bg);
+    border-radius: var(--radius);
+    border: 2px solid transparent;
+    padding: 20px;
+    width: 280px;
+    box-shadow: 0 4px 16px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.client-card h4 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.2rem;
+}
+
+.client-info {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.progress-bar-container {
+    background: #333;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 10px;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 8px;
+}

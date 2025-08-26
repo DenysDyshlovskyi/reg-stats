@@ -1,23 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Index</title>
+    <title>regstats - Monitor Mode</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        {{index_css | safe}}
-    </style>
-    <style>
-        {{universal_css | safe}}
+        {{ index_css | safe }}
     </style>
 </head>
+
 <body>
-    Start page goes here
+
+    <section id="slide1">
+        <h1>All Clients</h1>
+        <div class="flex-wrap">
+            <div class="panel">
+                <h3>Total Clients</h3>
+                <div class="chart-box"><canvas id="totalClientsChart"></canvas></div>
+                <table>
+                    <tr>
+                        <td>Servers</td>
+                        <td id="totalServers">0</td>
+                    </tr>
+                    <tr>
+                        <td>PCs</td>
+                        <td id="totalPCs">0</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="panel">
+                <h3>Status Overview</h3>
+                <div class="chart-box"><canvas id="statusChart"></canvas></div>
+            </div>
+            <div class="panel">
+                <h3>Fleet CPU</h3>
+                <div class="chart-box"><canvas id="fleetCpuChart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="slide2">
+        <h1>Client: TEMPLATE</h1>
+        <div class="flex-wrap">
+            <div class="panel">
+                <h3>CPU Usage Trends</h3>
+                <div class="chart-box"><canvas id="cpuTrendChart"></canvas></div>
+            </div>
+            <div class="panel">
+                <h3>Memory Usage Trends</h3>
+                <div class="chart-box"><canvas id="memTrendChart"></canvas></div>
+            </div>
+            <div class="panel">
+                <h3>Disk I/O Performance</h3>
+                <div class="chart-box"><canvas id="diskIOChart"></canvas></div>
+            </div>
+            <div class="panel">
+                <h3>Network</h3>
+                <div class="chart-box"><canvas id="netChart"></canvas></div>
+            </div>
+            <div class="panel">
+                <h3>Uptime</h3>
+                <p id="uptime">0d 0h 0m</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="slide3">
+        <h1>Network Stats</h1>
+        <div class="flex-wrap">
+            <div class="panel">
+                <h3>Average Latency (ms)</h3>
+                <div class="chart-box"><canvas id="latencyChart"></canvas></div>
+            </div>
+            <div class="panel">
+                <h3>Network Traffic (Mbps)</h3>
+                <div class="chart-box"><canvas id="trafficChart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="slide4">
+        <h1>System Logs</h1>
+        <div class="panel" style="width:90%; max-width:1200px;">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Level</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="slide5">
+        <h1>Clients Overview</h1>
+        <div class="flex-wrap" id="clientsOverview"></div>
+    </section>
+
+    <script>
+        {{ index_js | safe }}
+    </script>
 </body>
-<script>
-    {{universal_js | safe}}
-</script>
-<script>
-    {{index_js | safe}}
-</script>
+
 </html>
