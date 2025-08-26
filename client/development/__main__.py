@@ -14,7 +14,7 @@ import subprocess
 
 def main():
     # Define variables
-    DEBUG = True
+    DEBUG = False
     DEBUG_FILE_PATH = os.path.join(os.getcwd(), "debug.txt")
     CPU_SEND_INTERVAL = 5
     RAM_SEND_INTERVAL = 5
