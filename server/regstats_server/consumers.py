@@ -8,7 +8,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "regstats.settings")
 django.setup()
 
 # Define debug status and function
-DEBUG = False
+DEBUG = True
 def print_debug(text):
     if DEBUG:
         print(text)
