@@ -1,10 +1,12 @@
 # All views for paths starting with /api/
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from ..models import Clients
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 import json
 import uuid
+import re
+import os
 
 # Endpoint for registering client in database
 @csrf_exempt
@@ -141,6 +143,85 @@ def get_ws_session(request):
         return JsonResponse({
             "code": "OK"
         }, status=200)
+    else:
+        return JsonResponse({
+            "error": {
+                "code": "NOT_ALLOWED",
+                "message": "Method not Allowed. Allowed: POST"
+            }
+        }, status=405)
+
+# Check if a newer update exists and responds with it
+@csrf_exempt
+def get_update(request):
+    if request.method == "POST":
+        body = json.loads(request.body)
+        master_key = body["masterKey"]
+        client_id = body["clientId"]
+        current_version = body["currentVersion"]
+
+        if not client_id or not master_key or not current_version:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "POST request is missing three keys: client_id, master_key and current_version"
+                }
+            }, status=400)
+
+        # Check if an update exists
+        update_files = os.listdir(settings.UPDATES_ROOT)
+        if not update_files:
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "No update found."
+                }
+            }, status=404)
+
+        # Find the latest update file
+        latest_update = max(update_files, key=lambda x: int(x.split('-')[1].replace('.zip', '')))
+        update_file_path = os.path.join(settings.UPDATES_ROOT, latest_update)
+
+        # Get update version
+        file_name = os.path.basename(update_file_path)
+        match = re.search(r'update-(\d+)\.zip', file_name)
+        if match:
+            update_version = match.group(1)  # Extract the matched number
+        else:
+            return JsonResponse({
+                "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "Something went wrong."
+                }
+            }, status=500)
+
+        # Check if this version is higher than the current version
+        if int(update_version) > int(current_version):
+            # Stream the file to handle async correctly
+            try:
+                def file_iterator(file_path, chunk_size=8192):
+                    with open(file_path, 'rb') as f:
+                        while chunk := f.read(chunk_size):
+                            yield chunk
+
+                response = StreamingHttpResponse(file_iterator(update_file_path))
+                response['Content-Type'] = 'application/octet-stream'
+                response['Content-Disposition'] = f'attachment; filename={latest_update}'
+                return response
+            except Exception as e:
+                return JsonResponse({
+                    "error": {
+                        "code": "INTERNAL_SERVER_ERROR",
+                        "message": f"Error opening update file: {str(e)}"
+                    }
+                }, status=500)
+        else:
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "No new update found. You are on the latest version."
+                }
+            }, status=404)
     else:
         return JsonResponse({
             "error": {

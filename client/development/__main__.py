@@ -9,15 +9,13 @@ import datetime
 import traceback
 import re
 import aiofiles
-import random
 import shutil
+import subprocess
 
 def main():
     # Define variables
     DEBUG = True
     DEBUG_FILE_PATH = os.path.join(os.getcwd(), "debug.txt")
-    WEBSOCKET_PREFIX = "ws://"
-    HTTP_PREFIX = "http://"
     CPU_SEND_INTERVAL = 5
     RAM_SEND_INTERVAL = 5
     PING_INTERVAL = 2
@@ -28,6 +26,11 @@ def main():
     GET_STORAGE_INTERVAL = 1800
     GET_UPTIME_INTERVAL = 3600
     GET_PROCESSES_INTERVAL = 120
+
+    # write pid to text file
+    with open(os.path.join(os.getcwd(), "pid.txt"), 'w') as file:
+        file.write(str(os.getpid()))
+        file.close()
 
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
@@ -54,6 +57,8 @@ def main():
             client_id = vars["client_id"]
             master_key = vars["master_key"]
             domain_http = vars["domain_http"]
+            WEBSOCKET_PREFIX = vars["ws_prefix"]
+            HTTP_PREFIX = vars["http_prefix"]
 
             # Generate session for client
             session = requests.Session()

@@ -11,6 +11,7 @@ $vars = Get-Content -Path "$cd\client\vars.json" | ConvertFrom-Json
 $mainLocation = $vars.main_location
 $ipDomain = $vars.domain_http
 $masterKey = $vars.master_key
+$httpPrefix = $vars.http_prefix
 
 # Check if location exists
 if (!(Test-Path -Path "$mainLocation" -PathType Container -ErrorAction SilentlyContinue)) {
@@ -30,7 +31,7 @@ if (Get-Process -Name "RegStatsClient" -ErrorAction SilentlyContinue) {
 }
 
 # Post to server to remove client from database
-$postUrl = "http://$ipDomain/api/remove_client"
+$postUrl = "$httpPrefix$ipDomain/api/remove_client"
 $postData = @{
     "clientId" = $clientId
     "masterKey" = $masterKey

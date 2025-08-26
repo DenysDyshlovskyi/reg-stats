@@ -1,6 +1,9 @@
 {
-    "comment": "Contains all neccessary variables for the client side. Master key is a random string that is the same on the server side. In this case, its just 'masterKey'",
-    "domain_http": "localhost:9090",
-    "main_location": "C:\\RegStats",
-    "master_key": "masterKey"
+    "comment":  "Contains all neccessary variables for the client side. Master key is a random string that is the same on the server side. In this case, its just \u0027masterKey\u0027, Current version is the current version of the program",
+    "domain_http":  "localhost:9090",
+    "main_location":  "C:\\RegStats",
+    "master_key":  "masterKey",
+    "http_prefix":  "http://",
+    "ws_prefix":  "ws://",
+    "current_version":  19
 }

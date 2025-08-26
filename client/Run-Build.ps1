@@ -31,4 +31,11 @@ $usbClient = "$clientBaseDir\usb\RegStats\client"
 if (Test-Path -Path "$usbClient\$output" -PathType Leaf) {Remove-Item -Path "$usbClient\$output" -Force}
 Copy-Item -Path "$pyzPath" -Destination "$usbClient" -Force
 
+# Change current version
+$usbVars = Get-Content -Path "$usbClient\vars.json" | ConvertFrom-Json
+$newVersion = [int]$usbVars.current_version + 1
+$usbVars.current_version = $newVersion
+Set-Content -Path "$usbClient\vars.json" -Value ($usbVars | ConvertTo-Json) -Force
+
+Write-Host -BackgroundColor Yellow -ForegroundColor Black "New version is $newVersion. Update name would be 'update-$newVersion.zip'"
 Read-Host "Press enter to exit"

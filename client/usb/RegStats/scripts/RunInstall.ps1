@@ -24,7 +24,8 @@ Write-Host "Copied items into $mainLocation"
 try {
     $ipDomain = $vars.domain_http
     $masterKey = $vars.master_key
-    $postUrl = "http://$ipDomain/api/register"
+    $httpPrefix = $vars.http_prefix
+    $postUrl = "$httpPrefix$ipDomain/api/register"
 
     # Get public ip adress
     try {
