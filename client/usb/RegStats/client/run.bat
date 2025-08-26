@@ -1,2 +1,2 @@
-start powershell -ExecutionPolicy Bypass -File update.ps1
+start updateHidden.vbs
 python_embed\python.exe RegStatsClient.pyz

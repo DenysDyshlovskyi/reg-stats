@@ -101,21 +101,43 @@ try {
     $vars | Add-Member -Type NoteProperty -Name "client_id" -Value $clientId
     Set-Content -Path "$mainLocation\vars.json" -Value ($vars | ConvertTo-Json) -Force
 
-    # Create shortcut in startup folder
-    $WshShell = New-Object -COMObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\RegStats.lnk")
-    $Shortcut.TargetPath = "$mainLocation\run.bat"
-    $Shortcut.WorkingDirectory = "$mainLocation"
-    $Shortcut.Save()
+    # Change vbs file code to include main location
+    $newCode = ""
+    foreach ($line in Get-Content "$mainLocation\updateHidden.vbs") {
+        $line = $line.Replace("__MAINLOCATION__", $mainLocation)
+        $newCode += $line + "`n"
+    }
+    Set-Content -Path "$mainLocation\updateHidden.vbs" -Value "$newCode"
 
-    Write-Host "Created shortcut to exe in startup folder"
+    $newCode = ""
+    foreach ($line in Get-Content "$mainLocation\runHidden.vbs") {
+        $line = $line.Replace("__MAINLOCATION__", $mainLocation)
+        $newCode += $line + "`n"
+    }
+    Set-Content -Path "$mainLocation\runHidden.vbs" -Value "$newCode"
+
+    # Create shortcut in startup folder
+    try {
+        $WshShell = New-Object -COMObject WScript.Shell
+        $Shortcut = $WshShell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\RegStats.lnk")
+        $Shortcut.TargetPath = "$mainLocation\runHidden.vbs"
+        $Shortcut.WorkingDirectory = "$mainLocation"
+        $Shortcut.Save()
+        Write-Host "Created shortcut to exe in startup folder"
+    } catch {
+        Write-Error "Error creating startup shortcut: $_"
+    }
 
     # Script is done, start exe, unblock files
     foreach ($file in Get-ChildItem -Path $mainLocation -File -Recurse) {
         Unblock-File -Path $file.FullName
     }
 
-    Start-Process -FilePath "$mainLocation\run.bat" -WorkingDirectory "$mainLocation"
+    try {
+        Start-Process -FilePath "$mainLocation\runHidden.vbs" -WorkingDirectory "$mainLocation"
+    } catch {
+        Write-Error "Error starting run.bat: $_"
+    }
 
     Read-Host "Script done, press enter to exit..."
     exit

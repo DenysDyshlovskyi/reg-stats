@@ -27,11 +27,6 @@ def main():
     GET_UPTIME_INTERVAL = 3600
     GET_PROCESSES_INTERVAL = 120
 
-    # write pid to text file
-    with open(os.path.join(os.getcwd(), "pid.txt"), 'w') as file:
-        file.write(str(os.getpid()))
-        file.close()
-
     # Create debug text file if it doesnt exist
     if not os.path.exists(DEBUG_FILE_PATH):
         with open(DEBUG_FILE_PATH, "w") as f:

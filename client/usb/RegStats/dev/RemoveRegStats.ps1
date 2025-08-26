@@ -25,10 +25,7 @@ $varsClient = Get-Content -Path "$mainLocation\vars.json" | ConvertFrom-Json
 $clientId = $varsClient.client_id
 
 # If the exe is running, kill it
-if (Get-Process -Name "RegStatsClient" -ErrorAction SilentlyContinue) {
-    Stop-Process -Name "RegStatsClient" -Force
-    Write-Host "Killed reg stats client process"
-}
+Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -like "*RegStatsClient.pyz*"} | ForEach-Object { Stop-Process -Id $_.ProcessId }
 
 # Post to server to remove client from database
 $postUrl = "$httpPrefix$ipDomain/api/remove_client"
