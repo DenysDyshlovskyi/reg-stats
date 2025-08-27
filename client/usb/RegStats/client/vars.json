@@ -5,5 +5,5 @@
     "master_key":  "masterKey",
     "http_prefix":  "http://",
     "ws_prefix":  "ws://",
-    "current_version":  31
+    "current_version":  33
 }

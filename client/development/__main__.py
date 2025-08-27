@@ -11,6 +11,7 @@ import re
 import aiofiles
 import shutil
 import subprocess
+from datetime import datetime
 
 def main():
     # Define variables
@@ -77,19 +78,34 @@ def main():
                     'Origin': f'{HTTP_PREFIX}{domain_http}'
                 }
 
+                # Sends a backup of data to database
+                async def send_db_backup(data_dict):
+                    try:
+                        url = f"{HTTP_PREFIX}{domain_http}/api/add_data"
+                        await requests.post(url, data=json.dumps({
+                            "data_dict": data_dict,
+                            "master_key": master_key
+                        }))
+                    except Exception:
+                        write_to_debug(traceback.format_exc())
+
                 # Gets cpu usage and sends it
                 async def send_cpu(websocket):
                     while True:
                         try:
                             # Get cpu percentage
                             command = "wmic cpu get loadpercentage"
+                            timestamp = datetime.now().strftime("%H:%M:%S")
                             cpu_percent = subprocess.check_output(command, shell=True).decode().strip().split('\n')[1]
-                            await websocket.send(json.dumps({
+                            data_dict = {
                                 'sender': 'c',
                                 'type': 'cpu_percent',
                                 'percent': cpu_percent,
+                                'timestamp': timestamp,
                                 'client_id': client_id
-                            }))
+                            }
+                            await websocket.send(json.dumps(data_dict))
+                            await send_db_backup(data_dict)
                             await asyncio.sleep(CPU_SEND_INTERVAL)
                         except Exception:
                             write_to_debug(traceback.format_exc())
@@ -120,12 +136,16 @@ def main():
                             match = re.search(r"time[=<](\d+ms)", ping_output)
                             if match:
                                 ping = match.group(1)
-                                await websocket.send(json.dumps({
+                                timestamp = datetime.now().strftime("%H:%M:%S")
+                                data_dict = {
                                     'sender': 'c',
                                     'type': 'ping',
                                     'ping': ping,
+                                    'timestamp': timestamp,
                                     'client_id': client_id
-                                }))
+                                }
+                                await websocket.send(json.dumps(data_dict))
+                                await send_db_backup(data_dict)
                             else:
                                 write_to_debug(f"Error getting ping: {ping_output}")
                             await asyncio.sleep(PING_INTERVAL)
@@ -142,13 +162,17 @@ def main():
                             ram_info = subprocess.check_output(command, shell=True).decode().strip().split('\n')[1]
                             free_ram, total_ram = map(int, ram_info.split())
                             used_ram = (total_ram - free_ram)
-                            await websocket.send(json.dumps({
+                            timestamp = datetime.now().strftime("%H:%M:%S")
+                            data_dict = {
                                 'sender': 'c',
                                 'type': 'ram_usage',
                                 'total_gb': round(((total_ram / 1024) / 1024), 1),
                                 'usage_gb': round(((used_ram / 1024) / 1024), 1),
+                                'timestamp': timestamp,
                                 'client_id': client_id
-                            }))
+                            }
+                            await websocket.send(json.dumps(data_dict))
+                            await send_db_backup(data_dict)
                             await asyncio.sleep(RAM_SEND_INTERVAL)
                         except Exception:
                             write_to_debug(traceback.format_exc())
@@ -207,24 +231,32 @@ def main():
                             received_bandwidth, transmitted_bandwidth, download_speed, upload_speed = await measure_bandwidth()
 
                             # Send bandwidth through websocket
-                            await websocket.send(json.dumps({
+                            timestamp = datetime.now().strftime("%H:%M:%S")
+                            data_dict = {
                                 'sender': 'c',
                                 'type': 'bandwidth',
                                 'received': received_bandwidth,
                                 'transmitted': transmitted_bandwidth,
                                 'bandwidth_interval': BANDWIDTH_INTERVAL,
+                                'timestamp': timestamp,
                                 'client_id': client_id
-                            }))
+                            }
+                            await websocket.send(json.dumps(data_dict))
+                            await send_db_backup(data_dict)
 
                             # Send upload and download speed through websocket
-                            await websocket.send(json.dumps({
+                            timestamp = datetime.now().strftime("%H:%M:%S")
+                            data_dict = {
                                 'sender': 'c',
                                 'type': 'download_upload',
                                 'upload_speed': upload_speed,
                                 'download_speed': download_speed,
                                 'bandwidth_interval': BANDWIDTH_INTERVAL,
+                                'timestamp': timestamp,
                                 'client_id': client_id
-                            }))
+                            }
+                            await websocket.send(json.dumps(data_dict))
+                            await send_db_backup(data_dict)
 
                             await asyncio.sleep(BANDWIDTH_SEND_DELAY)
                         except Exception:
@@ -310,12 +342,16 @@ def main():
                                     shutil.rmtree(test_dir)
 
                             # Send data in websocket
-                            await websocket.send(json.dumps({
+                            timestamp = datetime.now().strftime("%H:%M:%S")
+                            data_dict = {
                                 'sender': 'c',
                                 'type': 'read_write',
                                 'data': data,
+                                'timestamp': timestamp,
                                 'client_id': client_id
-                            }))
+                            }
+                            await websocket.send(json.dumps(data_dict))
+                            await send_db_backup(data_dict)
                             await asyncio.sleep(READ_WRITE_INTERVAL)
                         except Exception:
                             write_to_debug(traceback.format_exc())
@@ -349,12 +385,16 @@ def main():
                                 }
 
                             # Send through websocket
-                            await websocket.send(json.dumps({
+                            timestamp = datetime.now().strftime("%H:%M:%S")
+                            data_dict = {
                                 'sender': 'c',
                                 'type': 'storage',
                                 'data': data,
+                                'timestamp': timestamp,
                                 'client_id': client_id
-                            }))
+                            }
+                            await websocket.send(json.dumps(data_dict))
+                            await send_db_backup(data_dict)
                             await asyncio.sleep(GET_STORAGE_INTERVAL)
                         except Exception:
                             write_to_debug(traceback.format_exc())
@@ -376,12 +416,16 @@ def main():
                                 uptime = stdout.decode().strip()  # Output in seconds
 
                                 # Send to websocket
-                                await websocket.send(json.dumps({
+                                timestamp = datetime.now().strftime("%H:%M:%S")
+                                data_dict = {
                                     'sender': 'c',
                                     'type': 'uptime',
                                     'seconds': round(float(uptime), 1),
+                                    'timestamp': timestamp,
                                     'client_id': client_id
-                                }))
+                                }
+                                await websocket.send(json.dumps(data_dict))
+                                await send_db_backup(data_dict)
                             else:
                                 write_to_debug(f"Error: {stderr.decode().strip()}")
 
@@ -426,12 +470,16 @@ def main():
                                         final_dict[process_name]["ram"] += item["MemoryUsageMB"]
 
                                 # Send to websocket
-                                await websocket.send(json.dumps({
+                                timestamp = datetime.now().strftime("%H:%M:%S")
+                                data_dict = {
                                     'sender': 'c',
                                     'type': 'processes',
                                     'processes': final_dict,
+                                    'timestamp': timestamp,
                                     'client_id': client_id
-                                }))
+                                }
+                                await websocket.send(json.dumps(data_dict))
+                                await send_db_backup(data_dict)
                             else:
                                 write_to_debug(f"Error: {stderr.decode().strip()}")
 
@@ -461,7 +509,7 @@ def main():
                             for task in task_list:
                                 if task:
                                     task.cancel()
-                            await asyncio.sleep(1)
+                            await asyncio.sleep(10)
                             break
 
             try:

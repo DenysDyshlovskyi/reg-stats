@@ -1,6 +1,6 @@
 # All views for paths starting with /api/
 from django.http import JsonResponse, StreamingHttpResponse
-from ..models import Clients
+from ..models import Clients, DataBackup
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -168,6 +168,15 @@ def get_update(request):
                 }
             }, status=400)
 
+        # Check if client exists
+        if not Clients.objects.filter(id=client_id).exists():
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Client does not exist or is deleted."
+                }
+            }, status = 404)
+
         # Check if an update exists
         update_files = os.listdir(settings.UPDATES_ROOT)
         if not update_files:
@@ -222,6 +231,61 @@ def get_update(request):
                     "message": "No new update found. You are on the latest version."
                 }
             }, status=404)
+    else:
+        return JsonResponse({
+            "error": {
+                "code": "NOT_ALLOWED",
+                "message": "Method not Allowed. Allowed: POST"
+            }
+        }, status=405)
+
+# Backs up data to database
+@csrf_exempt
+def add_data(request):
+    if request.method == "POST":
+        body = json.loads(request.body)
+        master_key = body["master_key"]
+        data_dict = body["data_dict"]
+
+        # Check if body is empty
+        if not data_dict or not master_key:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "POST request is missing two keys: master_key and data_dict"
+                }
+            }, status=400)
+
+        # Get client id
+        client_id = data_dict["client_id"]
+
+        # Check if client exists
+        if not Clients.objects.filter(id=client_id).exists():
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Client does not exist or is deleted."
+                }
+            }, status = 404)
+
+        client = Clients.objects.get(id=client_id)
+
+        # Insert into database
+        row = DataBackup(
+            client_id=client,
+            type=data_dict["type"],
+            data = json.dumps(data_dict)
+        )
+        row.save()
+
+        newest = DataBackup.objects.filter(client_id=client_id, type=data_dict["type"]).order_by("-id")[:10]
+        for row in DataBackup.objects.filter(client_id=client_id, type=data_dict["type"]):
+            if row not in newest:
+                row.delete()
+
+        return JsonResponse({
+            "CODE": "OK"
+        }, status=201)
     else:
         return JsonResponse({
             "error": {

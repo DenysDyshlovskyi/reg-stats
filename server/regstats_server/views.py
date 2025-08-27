@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from django.conf import settings
+from .models import Clients, DataBackup
+import json
 import os
 
 # Create your views here.
@@ -25,5 +27,24 @@ def importStaticFiles(name):
 
 # Renders in the index page, or default page
 def index(request):
+    # Get all clients
+    clients = []
+    for client in Clients.objects.all():
+        dict = {}
+        dict["nickname"] = client.nickname
+        dict["id"] = str(client.id)
+        pc_info = json.loads(client.pc_info)
+        for key in pc_info:
+            dict[key] = pc_info[key]
+        clients.append(dict)
     context = importStaticFiles("index")
+
+    # Get startup data
+    list = []
+    for row in DataBackup.objects.all():
+        list.append(row.data)
+
+    context["startup_data"] = json.dumps(list)
+    context["clients"] = clients
+    context["clients_info_json"] = json.dumps(clients)
     return render(request, "index.html", context)
