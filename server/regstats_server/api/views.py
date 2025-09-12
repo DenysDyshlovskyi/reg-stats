@@ -293,3 +293,61 @@ def add_data(request):
                 "message": "Method not Allowed. Allowed: POST"
             }
         }, status=405)
+
+@csrf_exempt
+def change_nickname(request):
+    if request.method == "POST":
+        # Check password
+        password = request.COOKIES.get('regstats-password')
+        if not password:
+            return JsonResponse({
+                "error": {
+                    "code": "UNAUTHORIZED"
+                }
+            }, status=401)
+
+        if password != settings.WHITELIST_PASSWORD:
+            return JsonResponse({
+                "error": {
+                    "code": "UNAUTHORIZED"
+                }
+            }, status=401)
+
+        body = json.loads(request.body)
+        client_id = body["client_id"]
+        nickname = body["nickname"]
+
+        # Check if body is empty
+        if not client_id or not nickname:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "POST request is missing two keys: client_id, nickname"
+                }
+            }, status=400)
+
+        # Check if client exists
+        if not Clients.objects.filter(id=client_id).exists():
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Client does not exist or is deleted."
+                }
+            }, status = 404)
+
+        client = Clients.objects.get(id=client_id)
+        client.nickname = nickname
+        client.save()
+
+        return JsonResponse({
+            "success": {
+                "CODE": "OK"
+            }
+        }, status=200)
+    else:
+        return JsonResponse({
+            "error": {
+                "code": "NOT_ALLOWED",
+                "message": "Method not Allowed. Allowed: POST"
+            }
+        }, status=405)

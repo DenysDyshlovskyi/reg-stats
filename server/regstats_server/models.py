@@ -1,6 +1,5 @@
 from django.db import models
 import uuid
-
 # Create your models here.
 
 # Model for clients table
@@ -15,3 +14,10 @@ class DataBackup(models.Model):
     client_id = models.ForeignKey(Clients, on_delete=models.CASCADE)
     type = models.CharField(max_length=255, default=None)
     data = models.JSONField(default=None)
+
+# Model for keeping track of online or offline clients
+class ClientConnectionStatus(models.Model):
+    id = models.AutoField(primary_key=True)
+    status = models.BooleanField(default=False) # False = offline, true = online
+    client_id = models.ForeignKey(Clients, on_delete=models.CASCADE)
+    unix_timestamp = models.IntegerField(default=0)
