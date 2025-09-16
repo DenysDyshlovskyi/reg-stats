@@ -1,9 +1,13 @@
 from django.shortcuts import render
 from django.conf import settings
-from .models import Clients, DataBackup, ClientConnectionStatus
-from django.http import JsonResponse
+from .models import Clients, DataBackup
+from django.http import JsonResponse, HttpResponse
 import json
 import os
+import math
+import time
+import datetime
+from zoneinfo import ZoneInfo
 
 # Create your views here.
 static_dir = os.path.join(settings.BASE_DIR, 'static')
@@ -29,7 +33,6 @@ def importStaticFiles(name):
 # Wipes all chart data and online offline data
 def wipedata(request):
     DataBackup.objects.all().delete()
-    ClientConnectionStatus.objects.all().delete()
     Clients.objects.all().delete()
     return JsonResponse({
         "success": {
@@ -58,21 +61,26 @@ def index(request):
     section_ids = []
 
     # Get all clients
+    if not Clients.objects.all():
+        return HttpResponse("No clients registered")
+
     clients = []
     for client in Clients.objects.all():
         dict = {}
         dict["nickname"] = client.nickname
         dict["id"] = str(client.id)
-        if ClientConnectionStatus.objects.filter(client_id=client.id).exists():
-            connection_row = ClientConnectionStatus.objects.get(client_id=client)
-            if connection_row.status:
-                dict["online"] = True
-            else:
-                dict["online"] = False
-            dict["last_online"] = connection_row.unix_timestamp
+        ping = client.ping
+        unix_now = math.floor(time.time())
+        readable_timestamp = datetime.datetime.fromtimestamp(ping, tz=ZoneInfo("Europe/Oslo"))
+        last_ping_timestamp = readable_timestamp.strftime("%Y-%m-%d %H:%M")
+
+        if ping > unix_now:
+            dict["online"] = True
         else:
             dict["online"] = False
-            dict["last_online"] = 0
+            readable_timestamp = datetime.datetime.fromtimestamp(ping, tz=ZoneInfo("Europe/Oslo"))
+            last_ping_timestamp = readable_timestamp.strftime("%Y-%m-%d %H:%M")
+            dict["last_online"] = last_ping_timestamp
         pc_info = json.loads(client.pc_info)
         for key in pc_info:
             dict[key] = pc_info[key]

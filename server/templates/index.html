@@ -13,7 +13,7 @@
 
 <body>
     {% for client in clients %}
-        <section id="{{ client.id }}-slide">
+        <section id="{{ client.id }}-slide" data-clientid="{{ client.id }}">
             <h1>{{ client.nickname }}</h1>
             <div class="charts-container">
                 <div class="panel-container">
@@ -39,7 +39,7 @@
             </div>
             <div class="panel-uptime">
                 <h3>Uptime</h3>
-                <p id="{{ client.id }}-uptime">0d 0h 0m</p>
+                <p id="{{ client.id }}-uptime">{% if client.online %} 0d 0h 0m {% else %} OFFLINE - Last online: {{ client.last_online }} {% endif %}</p>
             </div>
         </section>
         <section id="{{ client.id }}-slide2" data-clientid="{{ client.id }}" data-isslidetwo="true">

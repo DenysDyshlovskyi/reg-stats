@@ -57,6 +57,7 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
 }
 
 .panel-uptime {
@@ -72,6 +73,7 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative;
 }
 
 .panel-uptime h3 {

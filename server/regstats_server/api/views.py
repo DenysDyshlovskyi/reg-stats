@@ -7,6 +7,10 @@ import json
 import uuid
 import re
 import os
+import math
+import datetime
+import time
+from zoneinfo import ZoneInfo
 
 # Endpoint for registering client in database
 @csrf_exempt
@@ -282,10 +286,113 @@ def add_data(request):
         for row in DataBackup.objects.filter(client_id=client_id, type=data_dict["type"]):
             if row not in newest:
                 row.delete()
+        
+        # Insert uptime in unix into clients list
+        if data_dict["type"] == "uptime":
+            uptime = data_dict["seconds"]
+
+            # Try to floor the number
+            try:
+                uptime = math.floor(uptime)
+            except Exception:
+                return JsonResponse({
+                    "error": {
+                        "code": "INTERNAL_SERVER_ERROR",
+                        "message": "Something went wrong."
+                    }
+                }, status=500)
+            
+            # Extract the seconds from unix timestamp
+            unix_timestamp = math.floor(time.time())
+            uptime_update = unix_timestamp - uptime
+
+            # insert into database
+            client.uptime = uptime_update
+            client.save()
+        
+        # Insert ping timestamp to keep track of when client was last online
+        if data_dict["type"] == "ping":
+            unix_timestamp = (math.floor(time.time()) + 20)
+            client.ping = unix_timestamp
+            client.save()
 
         return JsonResponse({
             "CODE": "OK"
         }, status=201)
+    else:
+        return JsonResponse({
+            "error": {
+                "code": "NOT_ALLOWED",
+                "message": "Method not Allowed. Allowed: POST"
+            }
+        }, status=405)
+
+# Gets ping and timestamp and checks if client is online
+@csrf_exempt
+def is_online(request):
+    if request.method == "POST":
+        # Check password
+        password = request.COOKIES.get('regstats-password')
+        if not password:
+            return JsonResponse({
+                "error": {
+                    "code": "UNAUTHORIZED"
+                }
+            }, status=401)
+
+        if password != settings.WHITELIST_PASSWORD:
+            return JsonResponse({
+                "error": {
+                    "code": "UNAUTHORIZED"
+                }
+            }, status=401)
+
+        body = json.loads(request.body)
+        client_id = body["client_id"]
+
+        # Check if body is empty
+        if not client_id:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "POST request is missing key: client_id"
+                }
+            }, status=400)
+
+        # Check if client exists
+        if not Clients.objects.filter(id=client_id).exists():
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Client does not exist or is deleted."
+                }
+            }, status = 404)
+
+        # Get relevant info
+        return_dict = {}
+        client = Clients.objects.get(id=client_id)
+        ping = client.ping
+        uptime_unix = client.uptime
+        unix_now = math.floor(time.time())
+
+        # Check if client is online
+        if unix_now > ping:
+            return_dict["online"] = False
+        else:
+            return_dict["online"] = True
+
+        # add more info
+        return_dict["uptime_seconds"] = unix_now - uptime_unix
+        return_dict["uptime_unix"] = uptime_unix
+        return_dict["last_ping"] = ping
+        readable_timestamp = datetime.datetime.fromtimestamp(ping, tz=ZoneInfo("Europe/Oslo"))
+        return_dict["last_ping_timestamp"] = readable_timestamp.strftime("%Y-%m-%d %H:%M")
+
+        # Return
+        return JsonResponse({
+            "success": return_dict
+        }, status = 200)
+
     else:
         return JsonResponse({
             "error": {
@@ -338,6 +445,62 @@ def change_nickname(request):
         client = Clients.objects.get(id=client_id)
         client.nickname = nickname
         client.save()
+
+        return JsonResponse({
+            "success": {
+                "CODE": "OK"
+            }
+        }, status=200)
+    else:
+        return JsonResponse({
+            "error": {
+                "code": "NOT_ALLOWED",
+                "message": "Method not Allowed. Allowed: POST"
+            }
+        }, status=405)
+
+@csrf_exempt
+def delete_client(request):
+    if request.method == "POST":
+        # Check password
+        password = request.COOKIES.get('regstats-password')
+        if not password:
+            return JsonResponse({
+                "error": {
+                    "code": "UNAUTHORIZED"
+                }
+            }, status=401)
+
+        if password != settings.WHITELIST_PASSWORD:
+            return JsonResponse({
+                "error": {
+                    "code": "UNAUTHORIZED"
+                }
+            }, status=401)
+
+        body = json.loads(request.body)
+        client_id = body["client_id"]
+
+        # Check if body is empty
+        if not client_id:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "POST request is missing key: client_id"
+                }
+            }, status=400)
+
+        # Check if client exists
+        if not Clients.objects.filter(id=client_id).exists():
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Client does not exist or is deleted."
+                }
+            }, status = 404)
+
+        client = Clients.objects.get(id=client_id)
+        client.delete()
 
         return JsonResponse({
             "success": {

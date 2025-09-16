@@ -7,6 +7,8 @@ class Clients(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4,editable=False)
     nickname = models.CharField(max_length=255, default=None)
     pc_info = models.JSONField(default=None)
+    uptime = models.IntegerField(default=0)
+    ping = models.IntegerField(default=0)
 
 # Model for backup of websocket data
 class DataBackup(models.Model):
@@ -14,10 +16,3 @@ class DataBackup(models.Model):
     client_id = models.ForeignKey(Clients, on_delete=models.CASCADE)
     type = models.CharField(max_length=255, default=None)
     data = models.JSONField(default=None)
-
-# Model for keeping track of online or offline clients
-class ClientConnectionStatus(models.Model):
-    id = models.AutoField(primary_key=True)
-    status = models.BooleanField(default=False) # False = offline, true = online
-    client_id = models.ForeignKey(Clients, on_delete=models.CASCADE)
-    unix_timestamp = models.IntegerField(default=0)

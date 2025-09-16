@@ -8,5 +8,7 @@ urlpatterns = [
     path('get_ws_session', views.get_ws_session, name="get_ws_session"),
     path('get_update', views.get_update, name="get_update"),
     path('add_data', views.add_data, name="add_data"),
-    path('change_nickname', views.change_nickname, name="change_nickname")
+    path('change_nickname', views.change_nickname, name="change_nickname"),
+    path('is_online', views.is_online, name="is_online"),
+    path('delete_client', views.delete_client, name="delete_client")
 ]

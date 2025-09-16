@@ -72,9 +72,6 @@ function handleMessage(message) {
                     updateStorageChart(storageData, timestamp, client_id)
                     break
                 case "uptime":
-                    // Uptime message, update uptime chart
-                    const uptimeSeconds = message.seconds
-                    updateUptimeChart(uptimeSeconds, client_id)
                     break
                 case "processes":
                     // Processes message, update processes chart
@@ -574,21 +571,6 @@ function formatSeconds(seconds) {
     return { days, hours, minutes, seconds: secs };
 }
 
-var uptimeIntervals = {}
-
-function updateUptimeChart(uptimeSeconds, client_id) {
-    clearInterval(uptimeIntervals[client_id])
-    const uptimeContainer = document.getElementById(`${client_id}-uptime`)
-    const formatted = formatSeconds(uptimeSeconds)
-    uptimeContainer.innerHTML = `${formatted.days}d ${formatted.hours}h ${formatted.minutes}m ${formatted.seconds}s`
-    uptimeIntervals[client_id] = setInterval(function() {
-        uptimeSeconds += 1
-        const uptimeContainer = document.getElementById(`${client_id}-uptime`)
-        const formatted = formatSeconds(uptimeSeconds)
-        uptimeContainer.innerHTML = `${formatted.days}d ${formatted.hours}h ${formatted.minutes}m ${formatted.seconds}s`
-    }, 1000)
-}
-
 function updateProcessesData(processesData, timestamp, client_id) {
     // Parse cpu data
     var cpuTotal = 0
@@ -673,12 +655,28 @@ function updateProcessesData(processesData, timestamp, client_id) {
     chart.update()
 }
 
-function updateConnectionStatus(status, client_id) {
+var uptimeIntervals = {}
+function updateConnectionStatus(status, client_id, seconds_or_timestamp) {
+    clearInterval(uptimeIntervals[client_id])
+
+    // Set online or offline
     const connectionStatusText = document.getElementById(`${client_id}-connection-status`)
+    const uptimeContainer = document.getElementById(`${client_id}-uptime`)
     if (status == "online") {
         connectionStatusText.innerHTML = 'Status: <span class="online-span">ONLINE</span>'
+        const formatted = formatSeconds(seconds_or_timestamp)
+        uptimeContainer.innerHTML = `${formatted.days}d ${formatted.hours}h ${formatted.minutes}m ${formatted.seconds}s`
+        uptimeIntervals[client_id] = setInterval(function() {
+            seconds_or_timestamp += 1
+            const uptimeContainer = document.getElementById(`${client_id}-uptime`)
+            const formatted = formatSeconds(seconds_or_timestamp)
+            uptimeContainer.innerHTML = `${formatted.days}d ${formatted.hours}h ${formatted.minutes}m ${formatted.seconds}s`
+        }, 1000)
+        availablePanel(client_id)
     } else if (status == "offline") {
         connectionStatusText.innerHTML = 'Status: <span class="offline-span">OFFLINE</span>'
+        uptimeContainer.innerHTML = `OFFLINE - Last online: ${seconds_or_timestamp}`
+        unavailablePanel(client_id)
     }
 }
 
@@ -715,8 +713,10 @@ function startScrollLoop(client_id) {
 
     function scrollDown(callback) {
         let step = 0
+        var scrollTopThing = 0
         const scrollInterval = setInterval(() => {
-            container.scrollTop += scrollStep
+            scrollTopThing += scrollStep
+            container.scrollTop = scrollTopThing
             step++
 
             if (step >= totalSteps) {
@@ -755,6 +755,95 @@ function clearScrollIntervals() {
     })
 }
 
+// Says unavailable for all panels for client id
+function unavailablePanel(client_id) {
+    const section = document.getElementById(`${client_id}-slide`)
+    const section_two = document.getElementById(`${client_id}-slide2`)
+
+    // Get every panel div in the section
+    function getPanels(section) {
+        const panels = section.querySelectorAll('div')
+        panels.forEach(panel => {
+            const classList = []
+            panel.classList.forEach(function (value, key, listObj) {
+                classList.push(value)
+            })
+            if (classList.includes("panel") && !classList.includes("client-info")) {
+                const cover = document.createElement("div")
+                cover.style.width = "100%"
+                cover.style.height = "100%"
+                cover.style.position = "absolute"
+                cover.style.background = "var(--panel-bg)"
+                cover.style.top = "0"
+                cover.style.left = "0"
+                cover.style.display = "flex"
+                cover.style.alignItems = "center"
+                cover.style.justifyContent = "center"
+                cover.style.color = "Red"
+                cover.innerHTML = "Unavailable - Client offline"
+                cover.style.borderRadius = "var(--radius)"
+                cover.className = "unavailable-cover"
+                panel.appendChild(cover)
+            }
+        })
+    }
+
+    getPanels(section)
+    getPanels(section_two)
+}
+
+// Removes unavailable for all panels for client id
+function availablePanel(client_id) {
+    const section = document.getElementById(`${client_id}-slide`)
+    const section_two = document.getElementById(`${client_id}-slide2`)
+
+    // Get every panel div in the section
+    function getPanels(section) {
+        const panels = section.querySelectorAll('div')
+        panels.forEach(panel => {
+            const classList = []
+            panel.classList.forEach(function (value, key, listObj) {
+                classList.push(value)
+            })
+            if (classList.includes("unavailable-cover")) {
+                panel.remove()
+            }
+        })
+    }
+
+    getPanels(section)
+    getPanels(section_two)
+}
+
+// Checks if a client is online
+function isOnline(client_id) {
+    fetch("/api/is_online", {
+        method: "POST",
+        body: JSON.stringify({
+            client_id: client_id
+        }),
+        credentials: "include"
+    })
+
+    .then(response => response.json())
+
+    .then(response => {
+        if (response.success) {
+            if (response.success.online) {
+                const uptime_seconds = response.success.uptime_seconds
+                updateConnectionStatus("online", client_id, uptime_seconds)
+            } else {
+                const offline_since = response.success.last_ping_timestamp
+                updateConnectionStatus("offline", client_id, offline_since)
+            }
+        }
+    })
+
+    .catch(error => {
+        console.error(error)
+    })
+}
+
 var count = 0
 // Shows a slide
 function selectSlide(currentSectionId) {
@@ -768,8 +857,10 @@ function selectSlide(currentSectionId) {
     })
     // Get client id from section to start scroll loop
     const sectionElement = document.getElementById(currentSectionId)
+    const client_id = sectionElement.dataset.clientid
+    isOnline(client_id)
+
     if (sectionElement.dataset.isslidetwo == "true" || sectionElement.dataset.isslidetwo == true) {
-        const client_id = sectionElement.dataset.clientid
         startScrollLoop(client_id)
     }
     if (count >= section_ids.length - 1) {
