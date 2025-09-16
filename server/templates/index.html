@@ -5,64 +5,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>regstats - Monitor Mode</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src=" https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js "></script>
     <style>
         {{ index_css | safe }}
     </style>
 </head>
 
 <body>
-    <section id="slide1">
-        <h1>All Clients</h1>
-        <div class="flex-wrap">
-            <div class="panel">
-                <h3>Total Clients</h3>
-                <div class="chart-box"><canvas id="totalClientsChart"></canvas></div>
-                <table>
-                    <tr>
-                        <td>Servers</td>
-                        <td id="totalServers">0</td>
-                    </tr>
-                    <tr>
-                        <td>PCs</td>
-                        <td id="totalPCs">0</td>
-                    </tr>
-                </table>
-            </div>
-            <div class="panel">
-                <h3>Status Overview</h3>
-                <div class="chart-box"><canvas id="statusChart"></canvas></div>
-            </div>
-            <div class="panel">
-                <h3>Fleet CPU</h3>
-                <div class="chart-box"><canvas id="fleetCpuChart"></canvas></div>
-            </div>
-        </div>
-    </section>
-
     {% for client in clients %}
-        <section id="{{ client.id }}-slide">
-            <h1>Client: {{ client.nickname }}</h1>
-            <div class="flex-wrap">
-                <div class="panel">
-                    <h3>CPU Usage Trends</h3>
-                    <div class="chart-box"><canvas id="{{ client.id }}-cpu"></canvas></div>
+        <section id="{{ client.id }}-slide" data-clientid="{{ client.id }}">
+            <h1>{{ client.nickname }}</h1>
+            <div class="charts-container">
+                <div class="panel-container">
+                    <div class="panel">
+                        <h3>CPU Usage Trends</h3>
+                        <div class="chart-box"><canvas id="{{ client.id }}-cpu"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Memory Usage Trends</h3>
+                        <div class="chart-box"><canvas id="{{ client.id }}-memory"></canvas></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <h3>Memory Usage Trends</h3>
-                    <div class="chart-box"><canvas id="{{ client.id }}-memory"></canvas></div>
+                <div class="panel-container">
+                    <div class="panel">
+                        <h3>Disk I/O Performance</h3>
+                        <div class="chart-box"><canvas id="{{ client.id }}-diskIo"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Ping</h3>
+                        <div class="chart-box"><canvas id="{{ client.id }}-ping"></canvas></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <h3>Disk I/O Performance</h3>
-                    <div class="chart-box"><canvas id="{{ client.id }}-diskIo"></canvas></div>
+            </div>
+            <div class="panel-uptime">
+                <h3>Uptime</h3>
+                <p id="{{ client.id }}-uptime">{% if client.online %} 0d 0h 0m {% else %} OFFLINE - Last online: {{ client.last_online }} {% endif %}</p>
+            </div>
+        </section>
+        <section id="{{ client.id }}-slide2" data-clientid="{{ client.id }}" data-isslidetwo="true">
+            <h1>{{ client.nickname }}</h1>
+            <div class="charts-container">
+                <div class="panel-container">
+                    <div class="panel client-info">
+                        <h3>Client Info</h3>
+                        <p>Username: {{ client.username }}</p>
+                        <p>Nickname: {{ client.nickname }}</p>
+                        <p>Computer Name: {{ client.computer_name }}</p>
+                        <p>Domain: {{ client.domain }}</p>
+                        <p>OS: {{ client.os }}</p>
+                        <p>IP Address: {{ client.public_ip }}</p>
+                        <p>CPU: {{ client.cpu }}</p>
+                        <p>RAM: {{ client.ram }}</p>
+                        <p>Serial Number: {{ client.serialNumber }}</p>
+                        <p>Manufacturer: {{ client.manufacturer }}</p>
+                        <p id="{{ client.id }}-connection-status">Status: {% if client.online %} <span class="online-span">ONLINE</span> {% else %} <span class="offline-span">OFFLINE</span> {% endif %}</p>
+                    </div>
+                    <div class="panel">
+                        <h3>Download/Upload Speed</h3>
+                        <div class="chart-box"><canvas id="{{ client.id }}-uploadDownload"></canvas></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <h3>Network</h3>
-                    <div class="chart-box"><canvas id="{{ client.id }}-network"></canvas></div>
-                </div>
-                <div class="panel">
-                    <h3>Uptime</h3>
-                    <p id="{{ client.id }}-uptime">0d 0h 0m</p>
+                <div class="panel-container">
+                    <div class="panel">
+                        <h3>Bandwidth</h3>
+                        <div class="chart-box"><canvas id="{{ client.id }}-bandwidth"></canvas></div>
+                    </div>
+                    <div class="panel">
+                        <h3>Processes</h3>
+                        <div class="chart-box">
+                            <div class="processes-chart-container">
+                                <div class="processes-chart-box"><canvas id="{{ client.id }}-processes" width="500" height="300"></canvas></div>
+                                <div class="processes-legend-container" id="{{ client.id }}-legendContainer">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -70,15 +87,16 @@
 
     <script>
         {% if startup_data %}
-            const page_load_data = {{ startup_data| safe }}
+            const page_load_data = {{ startup_data | safe }}
         {% else %}
             const page_load_data = []
         {% endif %}
         const clients_info = {{ clients_info_json | safe }}
+        const clients_amount = {{ clients | length }}
+        const section_ids = {{ section_ids | safe }}
     </script>
     <script>
         {{ index_js | safe }}
     </script>
 </body>
-
 </html>

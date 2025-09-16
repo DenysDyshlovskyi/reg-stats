@@ -1,0 +1,60 @@
+{% if clients %}
+    {% for client in clients %}
+        <div style="display: flex; gap: 5px; align-items: center;"><p>Current name: {{ client.nickname }}</p><input type="text" id="{{ client.id }}-input" placeholder="new name"><button type="button" onclick="saveNickname('{{ client.id }}')">Save</button><button type="button" onclick="deleteClient('{{ client.id }}')">Delete</button></div>
+    {% endfor %}
+{% else %}
+    <p>no clients found</p>
+{% endif %}
+
+<script>
+    function saveNickname(client_id) {
+        const nicknameInput = document.getElementById(`${client_id}-input`)
+        const nickname = nicknameInput.value
+        fetch("/api/change_nickname", {
+            method: "POST",
+            credentials: "include",
+            body: JSON.stringify({
+                client_id: client_id,
+                nickname: nickname
+            })
+        })
+
+        .then(response => response.json())
+
+        .then(response => {
+            if (response.success) {
+                window.location.reload()
+            } else {
+                alert("something went wrong.")
+            }
+        })
+
+        .catch(error => {
+            alert("something went wrong")
+        })
+    }
+
+    function deleteClient(client_id) {
+        fetch("/api/delete_client", {
+            method: "POST",
+            credentials: "include",
+            body: JSON.stringify({
+                client_id: client_id
+            })
+        })
+
+        .then(response => response.json())
+
+        .then(response => {
+            if (response.success) {
+                window.location.reload()
+            } else {
+                alert("something went wrong.")
+            }
+        })
+
+        .catch(error => {
+            alert("something went wrong")
+        })
+    }
+</script>

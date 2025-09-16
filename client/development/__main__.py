@@ -25,7 +25,7 @@ def main():
     READ_WRITE_INTERVAL = 1800
     READ_WRITE_DATA_MB = 512 #MB
     GET_STORAGE_INTERVAL = 1800
-    GET_UPTIME_INTERVAL = 3600
+    GET_UPTIME_INTERVAL = 300
     GET_PROCESSES_INTERVAL = 120
 
     # Create debug text file if it doesnt exist
@@ -79,9 +79,12 @@ def main():
                 }
 
                 # Sends a backup of data to database
-                async def send_db_backup(data_dict):
+                async def send_db_backup(data_dict, uptime = False):
                     try:
-                        url = f"{HTTP_PREFIX}{domain_http}/api/add_data"
+                        if uptime:
+                            url = f"{HTTP_PREFIX}{domain_http}/api/add_uptime"
+                        else:
+                            url = f"{HTTP_PREFIX}{domain_http}/api/add_data"
                         await requests.post(url, data=json.dumps({
                             "data_dict": data_dict,
                             "master_key": master_key
@@ -400,7 +403,7 @@ def main():
                             write_to_debug(traceback.format_exc())
                             await asyncio.sleep(GET_STORAGE_INTERVAL)
 
-                async def get_uptime(websocket):
+                async def get_uptime():
                     while True:
                         try:
                             # Define command to get total seconds of uptime
@@ -415,7 +418,7 @@ def main():
                             if process.returncode == 0:
                                 uptime = stdout.decode().strip()  # Output in seconds
 
-                                # Send to websocket
+                                # Send to server
                                 timestamp = datetime.now().strftime("%H:%M:%S")
                                 data_dict = {
                                     'sender': 'c',
@@ -424,8 +427,7 @@ def main():
                                     'timestamp': timestamp,
                                     'client_id': client_id
                                 }
-                                await websocket.send(json.dumps(data_dict))
-                                await send_db_backup(data_dict)
+                                await send_db_backup(data_dict, uptime=True)
                             else:
                                 write_to_debug(f"Error: {stderr.decode().strip()}")
 
@@ -497,7 +499,7 @@ def main():
                     task_list.append(asyncio.create_task(get_bandwidth(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_read_write(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_storage(websocket=websocket)))
-                    task_list.append(asyncio.create_task(get_uptime(websocket=websocket)))
+                    task_list.append(asyncio.create_task(get_uptime()))
                     task_list.append(asyncio.create_task(get_processes(websocket=websocket)))
                     while True:
                         # Wait for messages from websocket
