@@ -286,30 +286,7 @@ def add_data(request):
         for row in DataBackup.objects.filter(client_id=client_id, type=data_dict["type"]):
             if row not in newest:
                 row.delete()
-        
-        # Insert uptime in unix into clients list
-        if data_dict["type"] == "uptime":
-            uptime = data_dict["seconds"]
 
-            # Try to floor the number
-            try:
-                uptime = math.floor(uptime)
-            except Exception:
-                return JsonResponse({
-                    "error": {
-                        "code": "INTERNAL_SERVER_ERROR",
-                        "message": "Something went wrong."
-                    }
-                }, status=500)
-            
-            # Extract the seconds from unix timestamp
-            unix_timestamp = math.floor(time.time())
-            uptime_update = unix_timestamp - uptime
-
-            # insert into database
-            client.uptime = uptime_update
-            client.save()
-        
         # Insert ping timestamp to keep track of when client was last online
         if data_dict["type"] == "ping":
             unix_timestamp = (math.floor(time.time()) + 20)
@@ -319,6 +296,81 @@ def add_data(request):
         return JsonResponse({
             "CODE": "OK"
         }, status=201)
+    else:
+        return JsonResponse({
+            "error": {
+                "code": "NOT_ALLOWED",
+                "message": "Method not Allowed. Allowed: POST"
+            }
+        }, status=405)
+
+# Updates the uptime
+@csrf_exempt
+def add_uptime(request):
+    if request.method == "POST":
+        body = json.loads(request.body)
+        master_key = body["master_key"]
+        data_dict = body["data_dict"]
+
+        # Check if body is empty
+        if not data_dict or not master_key:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "POST request is missing two keys: master_key and data_dict"
+                }
+            }, status=400)
+
+        # Get client id
+        client_id = data_dict["client_id"]
+
+        # Check if client exists
+        if not Clients.objects.filter(id=client_id).exists():
+            return JsonResponse({
+                "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Client does not exist or is deleted."
+                }
+            }, status = 404)
+
+        client = Clients.objects.get(id=client_id)
+        
+        # Insert uptime in unix into clients list
+        if data_dict["type"] == "uptime":
+            uptime = data_dict["seconds"]
+
+            # Try to floor the number
+            try:
+                if isinstance(uptime, float):
+                    uptime = math.floor(float(uptime))
+                else:
+                    uptime = int(uptime)
+            except Exception:
+                return JsonResponse({
+                    "error": {
+                        "code": "INTERNAL_SERVER_ERROR",
+                        "message": "Something went wrong."
+                    }
+                }, status=500)
+
+            # Extract the seconds from unix timestamp
+            unix_timestamp = math.floor(time.time())
+            uptime_update = unix_timestamp - uptime
+
+            # insert into database
+            client.uptime = uptime_update
+            client.save()
+
+            return JsonResponse({
+                "CODE": "OK"
+            }, status=201)
+        else:
+            return JsonResponse({
+                "error": {
+                    "code": "BAD_REQUEST",
+                    "message": "Type is not uptime."
+                }
+            }, status=400)
     else:
         return JsonResponse({
             "error": {
