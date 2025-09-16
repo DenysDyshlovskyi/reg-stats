@@ -11,6 +11,7 @@ import re
 import aiofiles
 import shutil
 import subprocess
+import ctypes
 from datetime import datetime
 
 def main():
@@ -406,30 +407,18 @@ def main():
                 async def get_uptime():
                     while True:
                         try:
-                            # Define command to get total seconds of uptime
-                            command = '''powershell "((Get-Date) - (Get-CimInstance -ClassName Win32_OperatingSystem | Select LastBootUpTime).LastBootUpTime).TotalSeconds"'''
-
-                            # Run the command
-                            process = await asyncio.create_subprocess_shell(command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-                            
-                            # Capture the output (uptime in seconds)
-                            stdout, stderr = await process.communicate()
-                            
-                            if process.returncode == 0:
-                                uptime = stdout.decode().strip()  # Output in seconds
-
-                                # Send to server
-                                timestamp = datetime.now().strftime("%H:%M:%S")
-                                data_dict = {
-                                    'sender': 'c',
-                                    'type': 'uptime',
-                                    'seconds': round(float(uptime), 1),
-                                    'timestamp': timestamp,
-                                    'client_id': client_id
-                                }
-                                await send_db_backup(data_dict, uptime=True)
-                            else:
-                                write_to_debug(f"Error: {stderr.decode().strip()}")
+                            lib = ctypes.windll.kernel32
+                            t = lib.GetTickCount64()
+                            t = int(str(t)[:-3])
+                            timestamp = datetime.now().strftime("%H:%M:%S")
+                            data_dict = {
+                                'sender': 'c',
+                                'type': 'uptime',
+                                'seconds': t,
+                                'timestamp': timestamp,
+                                'client_id': client_id
+                            }
+                            await send_db_backup(data_dict, uptime=True)
 
                             await asyncio.sleep(GET_UPTIME_INTERVAL)
                         except Exception:
@@ -493,13 +482,13 @@ def main():
                 async with websockets.connect(uri, additional_headers=headers) as websocket:
                     # Start background processes
                     task_list = []
+                    task_list.append(asyncio.create_task(get_uptime()))
                     task_list.append(asyncio.create_task(send_cpu(websocket=websocket)))
                     task_list.append(asyncio.create_task(send_ram(websocket=websocket)))
                     task_list.append(asyncio.create_task(ping(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_bandwidth(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_read_write(websocket=websocket)))
                     task_list.append(asyncio.create_task(get_storage(websocket=websocket)))
-                    task_list.append(asyncio.create_task(get_uptime()))
                     task_list.append(asyncio.create_task(get_processes(websocket=websocket)))
                     while True:
                         # Wait for messages from websocket
