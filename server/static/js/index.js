@@ -581,15 +581,24 @@ function updateProcessesData(processesData, timestamp, client_id) {
     const divisionNumber = cpuTotal / 100
 
     const legendData = []
+    var otherData = 0
     for (key in processesData) {
-        if (Number(processesData[key].cpu / divisionNumber).toFixed(2) > 0) {
+        if (Number(processesData[key].cpu / divisionNumber) > 1) {
             legendData.push({
                 label: key,
                 value: processesData[key].cpu / divisionNumber,
                 color: getRandomColor()
             })
+        } else {
+            otherData += (Number(processesData[key].cpu / divisionNumber))
         }
     }
+
+    legendData.push({
+        label: "Other",
+        value: otherData,
+        color: "grey"
+    })
 
     // Sort legend data
     legendData.sort((a, b) => b.value - a.value)
@@ -613,6 +622,8 @@ function updateProcessesData(processesData, timestamp, client_id) {
                 datasets: [{
                     data: [],
                     backgroundColor: [],
+                    borderColor: 'var(--panel-bg)',
+                    borderWidth: 2,
                     hoverOffset: 4
                 }]
             },
@@ -780,9 +791,10 @@ function unavailablePanel(client_id) {
                 cover.style.alignItems = "center"
                 cover.style.justifyContent = "center"
                 cover.style.color = "Red"
-                cover.innerHTML = "Unavailable - Client offline"
+                cover.innerHTML = "UNAVAILABLE - CLIENT OFFLINE"
                 cover.style.borderRadius = "var(--radius)"
                 cover.className = "unavailable-cover"
+                cover.style.fontSize = "3rem"
                 panel.appendChild(cover)
             }
         })
