@@ -337,7 +337,13 @@ def add_uptime(request):
         
         # Insert uptime in unix into clients list
         if data_dict["type"] == "uptime":
-            uptime = data_dict["seconds"]
+            seconds_raw = str(data_dict["seconds"])
+            uptime = seconds_raw.replace(",", ".")
+
+            if "." in uptime:
+                uptime = float(uptime)
+            else:
+                uptime = int(uptime)
 
             # Try to floor the number
             try:
