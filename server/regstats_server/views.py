@@ -32,8 +32,25 @@ def importStaticFiles(name):
 
 # Wipes all chart data and online offline data
 def wipedata(request):
+    # Check password
+    password = request.COOKIES.get('regstats-password')
+    if not password:
+        return JsonResponse({
+            "error": {
+                "code": "UNAUTHORIZED"
+            }
+        }, status=401)
+
+    if password != settings.WHITELIST_PASSWORD:
+        return JsonResponse({
+            "error": {
+                "code": "UNAUTHORIZED"
+            }
+        }, status=401)
+
     DataBackup.objects.all().delete()
     Clients.objects.all().delete()
+
     return JsonResponse({
         "success": {
             "code": "OK"
