@@ -4,7 +4,7 @@ const cpuDataMaxLenght = 10
 const ramDataMaxLenght = 10
 const ioDiskDataMaxLenght = 1
 const uploadDownloadMaxLenght = 3
-const bandwidthMaxLenght = 3
+const bandwidthMaxLenght = 12
 
 const slideChangeInterval = 20000
 
@@ -305,29 +305,45 @@ function updateRamChart(ramUsage, ramTotal, timestamp, client_id) {
 
 function updateBandwidthChart(bandwidthReceived, bandwidthTransmitted, bandwidthInterval, timestamp, client_id) {
     // Check if chart exists, make it if it doesnt
+    function getBackgroundColor(hsl_value) {
+        const array = hsl_value.split("(")
+        array[0] = "hsla("
+        const hsla = array.join('')
+        const final = `${hsla.slice(0, -1)}, 0.5)`
+        return final
+    }
     var datasets = []
+    const colors = [getRandomColor(), getRandomColor()]
     datasets.push({
-            label: `Received`,
-            data: [],
-            backgroundColor: getRandomColor(),
-            fill: "false",
+        label: `Received`,
+        data: [],
+        borderColor: colors[0],
+        backgroundColor: getBackgroundColor(colors[0]),
+        fill: true,
+        yAxisID: "y"
     })
     datasets.push({
         label: `Transmitted`,
         data: [],
-        backgroundColor: getRandomColor(),
-        fill: "false",
+        borderColor: colors[1],
+        backgroundColor: getBackgroundColor(colors[1]),
+        fill: true,
+        yAxisID: "y1"
     })
     if (!Chart.getChart(`${client_id}-bandwidth`)) {
         const ctx = document.getElementById(`${client_id}-bandwidth`).getContext('2d')
         new Chart(ctx, {
-            type: "bar",
+            type: "line",
             data: {
                 labels: [],
                 datasets: datasets
             },
             options: {
                 responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: 'false'
+                },
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
@@ -347,6 +363,9 @@ function updateBandwidthChart(bandwidthReceived, bandwidthTransmitted, bandwidth
                         }
                     },
                     y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
                         min: 0,
                         title: {
                             display: true,
@@ -357,6 +376,11 @@ function updateBandwidthChart(bandwidthReceived, bandwidthTransmitted, bandwidth
                                 weight: "bold"
                             }
                         }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: 'true',
+                        position: 'right'
                     }
                 }
             }
@@ -706,11 +730,8 @@ function startScrollLoop(client_id) {
     const container = document.getElementById(`${client_id}-legendContainer`);
 
     // Define variables for animation
-    const totalDuration = slideChangeInterval
-    const waitTime = totalDuration * 0.2
-    const scrollTime = totalDuration * 0.8
-    const frameRate = 60
-    const interval = 1000 / frameRate
+    const waitTime = slideChangeInterval * 0.2
+    const scrollTime = slideChangeInterval * 0.8
 
     let maxScroll = container.scrollHeight - container.clientHeight
 
@@ -719,38 +740,27 @@ function startScrollLoop(client_id) {
         return
     }
 
-    const totalSteps = scrollTime / interval
-    const scrollStep = maxScroll / totalSteps
-
-    function scrollDown(callback) {
-        let step = 0
-        var scrollTopThing = 0
-        const scrollInterval = setInterval(() => {
-            scrollTopThing += scrollStep
-            container.scrollTop = scrollTopThing
-            step++
-
-            if (step >= totalSteps) {
-                clearInterval(scrollInterval)
-                if (callback) callback()
-            }
-        }, interval)
-        currentScrollIntervals.push(scrollInterval)
-    }
-
     function startLoop() {
         container.scrollTop = 0;
 
         // Wait at top
-        currentScrollTimeouts.push(
-            setTimeout(() => {
-                // Scroll down
-                scrollDown(() => {
-                    // Wait at bottom
-                    currentScrollTimeouts.push(setTimeout(() => {}, waitTime))
-                })
-            }, waitTime)
-        )
+        setTimeout(function () {
+            const framerate = 60
+            const intervalTime = 1000 / framerate
+
+            const totalSteps = scrollTime / intervalTime
+            const scrollStep = maxScroll / totalSteps
+
+            var loop = 0
+            const interval = setInterval(function() {
+                container.scrollTop += scrollStep
+                loop += 1;
+
+                if (loop >= totalSteps) {
+                    clearInterval(interval)
+                }
+            }, intervalTime)
+        }, waitTime)
     }
 
     startLoop()
