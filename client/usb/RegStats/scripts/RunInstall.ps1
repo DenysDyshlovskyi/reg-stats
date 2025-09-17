@@ -42,24 +42,23 @@ try {
     $ramInfo = Get-CimInstance -ClassName Win32_PhysicalMemory
 
     # Get ddr type
+    $voltages = $ramInfo | Select-Object -ExpandProperty ConfiguredVoltage
     $ddrType = "DDR"
-    if ($ramInfo.ConfiguredVoltage -eq 1200) {
-        $ddrType = "DDR4"
-    } elseif ($ramInfo.ConfiguredVoltage -eq 1500) {
-        $ddrType = "DDR3"
-    } elseif ($ramInfo.ConfiguredVoltage -eq 1800) {
-        $ddrType = "DDR2"
-    } elseif ($ramInfo.ConfiguredVoltage -gt 1800) {
-        $ddrType = "DDR"
-    } elseif ($ramInfo.ConfiguredVoltage -lt 1200) {
-        $ddrType = "DDR5"
+    foreach ($v in $voltages) {
+        if ($v -eq 1200) { $ddrType = "DDR4" }
+        elseif ($v -eq 1500) { $ddrType = "DDR3" }
+        elseif ($v -eq 1800) { $ddrType = "DDR2" }
+        elseif ($v -gt 1800) { $ddrType = "DDR" }
+        elseif ($v -lt 1200) { $ddrType = "DDR5" }
     }
 
+    $ram = $ramInfo[0]
+
     # Get capacity
-    $ramCapacity = ($ramInfo.Capacity / [Math]::Pow(1024,3))
+    $ramCapacity = ($ramInfo | Measure-Object -Property Capacity -Sum).Sum / [Math]::Pow(1024,3)
 
     # Put everything together
-    $ramName = '{0} {1} {2}GB {3}MHz {4}' -f $ramInfo.Manufacturer, $ddrType, $ramCapacity, $ramInfo.ConfiguredClockSpeed, $ramInfo.SerialNumber
+    $ramName = '{0} {1} {2}GB {3}MHz {4}' -f $ram.Manufacturer, $ddrType, [math]::Round($totalRamCapacity, 2), $ram.ConfiguredClockSpeed, $ram.SerialNumber
 
     # Get serial number
     $serialNumber = (Get-WmiObject -Class Win32_BIOS | Select-Object -Property SerialNumber).SerialNumber
