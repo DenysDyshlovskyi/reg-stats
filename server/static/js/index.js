@@ -731,7 +731,7 @@ function startScrollLoop(client_id) {
 
     // Define variables for animation
     const waitTime = slideChangeInterval * 0.2
-    const scrollTime = slideChangeInterval * 0.8
+    const scrollTime = slideChangeInterval * 0.4
 
     let maxScroll = container.scrollHeight - container.clientHeight
 
@@ -740,30 +740,28 @@ function startScrollLoop(client_id) {
         return
     }
 
-    function startLoop() {
-        container.scrollTop = 0;
+    // Start at top of container and wait the waiting time
+    container.scrollTop = 0
+    const startTimeout = setTimeout(function() {
+        const framerate = 60
+        const intervalTime = 1000 / framerate
+        const totalSteps = scrollTime / intervalTime
+        const scrollStep = maxScroll / totalSteps
 
-        // Wait at top
-        setTimeout(function () {
-            const framerate = 60
-            const intervalTime = 1000 / framerate
+        var scrollTop = 0
+        var currentStep = 0
+        const scrollInterval = setInterval(function() {
+            scrollTop += scrollStep
+            container.scrollTop = scrollTop
+            currentStep += 1
 
-            const totalSteps = scrollTime / intervalTime
-            const scrollStep = maxScroll / totalSteps
-
-            var loop = 0
-            const interval = setInterval(function() {
-                container.scrollTop += scrollStep
-                loop += 1;
-
-                if (loop >= totalSteps) {
-                    clearInterval(interval)
-                }
-            }, intervalTime)
-        }, waitTime)
-    }
-
-    startLoop()
+            if (currentStep >= totalSteps) {
+                clearInterval(scrollInterval)
+            }
+        }, intervalTime)
+        currentScrollIntervals.push(scrollInterval)
+    }, waitTime)
+    currentScrollTimeouts.push(startTimeout)
 }
 
 // Clears intervals and timeouts for scrolling
