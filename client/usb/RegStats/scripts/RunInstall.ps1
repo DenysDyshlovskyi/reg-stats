@@ -58,7 +58,7 @@ try {
     $ramCapacity = ($ramInfo | Measure-Object -Property Capacity -Sum).Sum / [Math]::Pow(1024,3)
 
     # Put everything together
-    $ramName = '{0} {1} {2}GB {3}MHz {4}' -f $ram.Manufacturer, $ddrType, [math]::Round($totalRamCapacity, 2), $ram.ConfiguredClockSpeed, $ram.SerialNumber
+    $ramName = '{0} {1} {2}GB {3}MHz {4}' -f $ram.Manufacturer, $ddrType, [math]::Round($ramCapacity, 2), $ram.ConfiguredClockSpeed, $ram.SerialNumber
 
     # Get serial number
     $serialNumber = (Get-WmiObject -Class Win32_BIOS | Select-Object -Property SerialNumber).SerialNumber
